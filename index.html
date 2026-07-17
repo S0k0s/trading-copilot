@@ -253,12 +253,12 @@ let DATA = [];
 
 // Οι δικές μου θέσεις (demo/practice, Trading212 Invest) — ενημέρωσε manually όποτε ανοίγεις/κλείνεις θέση
 const POSITIONS = [
-  {ticker:"MU", strategy:"Long-Term · Quality Compounding", invested:500, estPrice:829.93, estShares:0.688,
+  {ticker:"MU", strategy:"Long-Term · Quality Compounding", invested:499.25, estPrice:822.99, estShares:0.69311665,
    stop:null, stopNote:"Δεν έχει οριστεί ακόμα σταθερό stop — long-term θέση, επανεξέταση περιοδικά.",
-   date:"17/07/2026", status:"Εντολή σε εκκρεμότητα / εκτελέστηκε (έλεγξε Trading212 για ακριβή τιμή γεμίσματος)"},
-  {ticker:"INTC", strategy:"Swing · Quality Pullback", invested:200, estPrice:93.15, estShares:2.454,
+   date:"17/07/2026", status:"Εκτελέστηκε — πραγματική τιμή γεμίσματος: $822.99 (€720.30/μετοχή)"},
+  {ticker:"INTC", strategy:"Swing · Quality Pullback", invested:199.66, estPrice:92.14, estShares:2.47641871,
    stop:87.70, stopNote:"Stop-loss ≈ -6% από την τιμή εισόδου.",
-   date:"17/07/2026", status:"Εντολή σε εκκρεμότητα / εκτελέστηκε (έλεγξε Trading212 για ακριβή τιμή γεμίσματος)"}
+   date:"17/07/2026", status:"Εκτελέστηκε — πραγματική τιμή γεμίσματος: $92.14 (€80.64/μετοχή)"}
 ];
 
 function tvSymbol(ticker){
