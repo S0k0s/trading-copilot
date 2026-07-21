@@ -18,10 +18,9 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-from bs4 import BeautifulSoup
-
 ROOT = Path(__file__).resolve().parent.parent
 DATA_JSON = ROOT / "data.json"
+NEWS_JSON = ROOT / "news.json"
 
 # ticker -> εμφανιζόμενο όνομα
 TICKERS = {
@@ -55,6 +54,22 @@ HEADERS = {
                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     "Accept-Language": "en-US,en;q=0.9",
 }
+
+# Σε κάποια τοπικά Python (π.χ. python.org στο macOS) το urllib δεν βρίσκει CA
+# certificates — αν υπάρχει το certifi, χρησιμοποίησε το bundle του.
+_SSL_CTX = None
+try:
+    import ssl
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    pass
+
+
+def _urlopen(req, timeout=25):
+    if _SSL_CTX is not None:
+        return urlopen(req, timeout=timeout, context=_SSL_CTX)
+    return urlopen(req, timeout=timeout)
 
 LABELS = {
     "pe_ratio": ["PE Ratio"],
@@ -105,10 +120,11 @@ def to_number(txt):
 def fetch_table_map(ticker):
     """Κατεβάζει τη σελίδα στατιστικών και επιστρέφει dict label->value_text
     από ΟΛΑ τα label/value ζευγάρια σε <tr> με 2 κελιά, σε όλη τη σελίδα."""
+    from bs4 import BeautifulSoup  # lazy: μόνο το stats scraping το χρειάζεται
     slug = ticker.lower().replace(".", "-")
     url = f"https://stockanalysis.com/stocks/{slug}/statistics/"
     req = Request(url, headers=HEADERS)
-    with urlopen(req, timeout=25) as resp:
+    with _urlopen(req) as resp:
         html = resp.read()
     soup = BeautifulSoup(html, "lxml")
     out = {}
@@ -234,7 +250,241 @@ def scan_ticker(ticker, name, previous):
     return row
 
 
+# ---------------------------------------------------------------------------
+# Ειδήσεις & sentiment (τροφοδοτεί την "Πρόβλεψη τάσης" του Trend Lab)
+# ---------------------------------------------------------------------------
+
+POSITIVE_WORDS = {
+    "beat", "beats", "tops", "top", "record", "surge", "surges", "soar", "soars",
+    "jump", "jumps", "rally", "rallies", "upgrade", "upgrades", "upgraded",
+    "raises", "raised", "boost", "boosts", "outperform", "strong", "stronger",
+    "growth", "gain", "gains", "wins", "win", "deal", "partnership", "partnering",
+    "expands", "expansion", "bullish", "upside", "breakthrough", "approval",
+    "approves", "buyback", "dividend", "profit", "profitable", "success",
+    "milestone", "launches", "launch", "unveils", "accelerates", "momentum",
+}
+NEGATIVE_WORDS = {
+    "miss", "misses", "missed", "falls", "fall", "drop", "drops", "plunge",
+    "plunges", "slump", "slumps", "cut", "cuts", "downgrade", "downgrades",
+    "downgraded", "underperform", "weak", "weaker", "lawsuit", "sues", "sued",
+    "probe", "investigation", "recall", "layoffs", "bearish", "downside",
+    "risk", "risks", "fears", "fear", "warning", "warns", "warn", "delay",
+    "delays", "delayed", "ban", "bans", "fine", "fined", "decline", "declines",
+    "tumble", "tumbles", "crash", "crashes", "loss", "losses", "danger",
+    "concern", "concerns", "selloff", "sell-off", "halt", "halts",
+}
+
+WORD_RE = re.compile(r"[a-z']+")
+
+
+def sentiment_of(text):
+    """Απλό lexicon score ενός headline: -1.0 .. +1.0 (0 = ουδέτερο)."""
+    words = WORD_RE.findall((text or "").lower())
+    pos = sum(1 for w in words if w in POSITIVE_WORDS)
+    neg = sum(1 for w in words if w in NEGATIVE_WORDS)
+    raw = max(-3, min(3, pos - neg))
+    return round(raw / 3, 2)
+
+
+def _devalue_resolve(data, i, depth=0):
+    """Αποκωδικοποίηση του συμπαγούς (devalue) format των SvelteKit __data.json:
+    το data είναι flat array και τα values των dict/list είναι δείκτες σε αυτό."""
+    if depth > 12 or not isinstance(i, int) or i < 0 or i >= len(data):
+        return None
+    v = data[i]
+    if isinstance(v, dict):
+        return {k: _devalue_resolve(data, idx, depth + 1) for k, idx in v.items()}
+    if isinstance(v, list):
+        return [_devalue_resolve(data, idx, depth + 1) for idx in v]
+    return v
+
+
+def _parse_news_time(t):
+    """'2026-07-21T15:20:11.000Z' -> epoch· αλλιώς προσπάθησε 'Jul 20, 2026, ...'."""
+    if not t:
+        return None
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})", t)
+    if m:
+        y, mo, d, h, mi = map(int, m.groups())
+        try:
+            import calendar
+            return calendar.timegm((y, mo, d, h, mi, 0, 0, 0, 0))
+        except Exception:
+            return None
+    m = re.match(r"([A-Z][a-z]{2}) (\d{1,2}), (\d{4})", t)
+    if m:
+        months = {m_: i_ for i_, m_ in enumerate(
+            ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
+        try:
+            import calendar
+            return calendar.timegm((int(m.group(3)), months[m.group(1)],
+                                    int(m.group(2)), 12, 0, 0, 0, 0, 0))
+        except Exception:
+            return None
+    return None
+
+
+def fetch_news(ticker):
+    """Επιστρέφει λίστα από {t: τίτλος, d: ISO ημερομηνία, s: sentiment, src, u: url}."""
+    slug = ticker.lower().replace(".", "-")
+    url = f"https://stockanalysis.com/stocks/{slug}/__data.json"
+    req = Request(url, headers=HEADERS)
+    with _urlopen(req) as resp:
+        raw = json.loads(resp.read())
+    items = []
+    for node in raw.get("nodes", []):
+        if not node or node.get("type") != "data":
+            continue
+        data = node["data"]
+        for i, v in enumerate(data):
+            if isinstance(v, dict) and "title" in v and "url" in v and "source" in v:
+                it = _devalue_resolve(data, i)
+                if it and isinstance(it.get("title"), str):
+                    items.append(it)
+    out = []
+    for it in items:
+        title = it["title"].strip()
+        snippet = (it.get("text") or "")[:250]
+        epoch = _parse_news_time(it.get("time"))
+        out.append({
+            "t": title,
+            "d": time.strftime("%Y-%m-%d", time.gmtime(epoch)) if epoch else None,
+            "epoch": epoch,
+            "s": sentiment_of(title + " " + snippet),
+            "src": it.get("source"),
+            "u": it.get("url"),
+        })
+    return out
+
+
+def ticker_news_summary(items):
+    """Συνολικό sentiment -100..+100 με βάρος πρόσφατο (half-life 3 μέρες)."""
+    now = time.time()
+    wsum, wtot = 0.0, 0.0
+    for it in items:
+        age_days = (now - it["epoch"]) / 86400 if it["epoch"] else 14
+        w = 0.5 ** (max(0.0, age_days) / 3.0)
+        wsum += w * it["s"]
+        wtot += w
+    score = round((wsum / wtot) * 100) if wtot > 0 else 0
+    headlines = [{k: it[k] for k in ("t", "d", "s", "src", "u")} for it in items[:12]]
+    return {"score": score, "n": len(items), "headlines": headlines}
+
+
+def scan_news(delay=1.0):
+    previous = {}
+    if NEWS_JSON.exists():
+        try:
+            previous = json.loads(NEWS_JSON.read_text(encoding="utf-8")).get("tickers", {})
+        except Exception:
+            pass
+
+    tickers_out = {}
+    for i, ticker in enumerate(TICKERS, 1):
+        try:
+            items = fetch_news(ticker)
+            tickers_out[ticker] = ticker_news_summary(items)
+            print(f"[{i}/{len(TICKERS)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
+                  f"sentiment {tickers_out[ticker]['score']:+d}")
+        except Exception as e:
+            print(f"  ! news {ticker}: {e} — κρατάω παλιά δεδομένα")
+            if ticker in previous:
+                tickers_out[ticker] = previous[ticker]
+        time.sleep(delay)
+
+    if not tickers_out:
+        print("Καμία είδηση δεν ανακτήθηκε — δεν γράφω news.json.", file=sys.stderr)
+        return
+    out = {
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "tickers": tickers_out,
+    }
+    NEWS_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=None), encoding="utf-8")
+    print(f"\nΈγραψα ειδήσεις/sentiment για {len(tickers_out)} μετοχές στο {NEWS_JSON}.")
+
+
+# ---------------------------------------------------------------------------
+# Trading212 — αυτόματο sync θέσεων (προαιρετικό)
+#
+# Χρειάζεται το env var T212_API_KEY (API key από Trading212 → Settings → API).
+# Προαιρετικά T212_MODE=demo|live (default: demo, δηλ. practice λογαριασμός).
+# Στο GitHub Actions τα δίνουμε ως repository secrets — ΠΟΤΕ hardcoded εδώ.
+# Χωρίς key, το sync απλά παραλείπεται και το site δείχνει τα χειροκίνητα
+# POSITIONS του index.html.
+# ---------------------------------------------------------------------------
+
+POSITIONS_JSON = ROOT / "positions.json"
+
+
+def t212_request(path, api_key, mode):
+    base = "https://demo.trading212.com" if mode == "demo" else "https://live.trading212.com"
+    req = Request(base + path, headers={"Authorization": api_key})
+    with _urlopen(req) as resp:
+        return json.loads(resp.read())
+
+
+def t212_plain_ticker(t):
+    """'AAPL_US_EQ' -> 'AAPL' · 'BRKb_US_EQ' -> 'BRK.B' (πεζό στο τέλος = share class)."""
+    core = (t or "").split("_")[0]
+    if len(core) > 1 and core[-1].islower():
+        core = core[:-1] + "." + core[-1].upper()
+    return core.upper()
+
+
+def sync_positions():
+    import os
+    api_key = os.environ.get("T212_API_KEY", "").strip()
+    mode = (os.environ.get("T212_MODE", "demo").strip() or "demo").lower()
+    if not api_key:
+        print("Χωρίς T212_API_KEY — παραλείπω το sync θέσεων (fallback στα χειροκίνητα POSITIONS).")
+        return False
+
+    try:
+        portfolio = t212_request("/api/v0/equity/portfolio", api_key, mode)
+        time.sleep(1.5)  # όριο ρυθμού του T212 API
+        cash = t212_request("/api/v0/equity/account/cash", api_key, mode)
+    except HTTPError as e:
+        print(f"! Trading212 API: HTTP {e.code} — {'λάθος/ληγμένο key;' if e.code in (401, 403) else 'σφάλμα'} "
+              f"Δεν γράφω positions.json.", file=sys.stderr)
+        return False
+    except (URLError, TimeoutError, OSError) as e:
+        print(f"! Trading212 API: δικτυακό σφάλμα ({e}) — δεν γράφω positions.json.", file=sys.stderr)
+        return False
+
+    positions = []
+    for p in portfolio if isinstance(portfolio, list) else []:
+        positions.append({
+            "ticker": t212_plain_ticker(p.get("ticker")),
+            "t212_ticker": p.get("ticker"),
+            "quantity": p.get("quantity"),
+            "avg_price": p.get("averagePrice"),
+            "current_price": p.get("currentPrice"),
+            "ppl": p.get("ppl"),
+            "fx_ppl": p.get("fxPpl"),
+            "since": (p.get("initialFillDate") or "")[:10] or None,
+        })
+
+    out = {
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "mode": mode,
+        "cash": {k: cash.get(k) for k in ("free", "total", "invested", "ppl", "result")}
+        if isinstance(cash, dict) else {},
+        "positions": positions,
+    }
+    POSITIONS_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=None), encoding="utf-8")
+    print(f"Sync Trading212 ({mode}): {len(positions)} θέσεις -> {POSITIONS_JSON}")
+    return True
+
+
 def main():
+    if "--news-only" in sys.argv:
+        scan_news()
+        return
+    if "--positions-only" in sys.argv:
+        sync_positions()
+        return
+
     previous_by_ticker = {}
     if DATA_JSON.exists():
         try:
@@ -269,6 +519,18 @@ def main():
     }
     DATA_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=None), encoding="utf-8")
     print(f"\nΈγραψα {len(results)} μετοχές στο {DATA_JSON} ({failures} απέτυχαν πλήρως).")
+
+    # Ειδήσεις & sentiment για το Trend Lab (ανθεκτικό: αποτυχία εδώ δεν ρίχνει το run)
+    try:
+        scan_news()
+    except Exception as e:
+        print(f"! Το news scan απέτυχε συνολικά ({e}) — το data.json γράφτηκε κανονικά.")
+
+    # Sync θέσεων Trading212 (no-op χωρίς T212_API_KEY)
+    try:
+        sync_positions()
+    except Exception as e:
+        print(f"! Το sync θέσεων απέτυχε ({e}) — τα υπόλοιπα δεδομένα γράφτηκαν κανονικά.")
 
 
 if __name__ == "__main__":

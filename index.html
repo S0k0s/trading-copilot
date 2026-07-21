@@ -140,22 +140,124 @@
   .j-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;}
   .j-empty{color:var(--muted);font-size:14px;padding:24px 10px;text-align:center;background:var(--panel);
     border-radius:12px;border:1px solid var(--border);}
+
+  /* --- V4: Trend Lab, Αγορές, Events, Στρατηγικές --- */
+  .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .tl-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+  .tl-select{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:9px 12px;
+    border-radius:8px;font-size:14px;min-width:220px;}
+  .tl-ranges{display:flex;gap:4px;}
+  .tl-range{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:7px 12px;
+    border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+  .tl-range.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tl-hint{font-size:11.5px;color:var(--muted);}
+  .tl-chart-card{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:10px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .tl-chart-card canvas{width:100%;display:block;}
+  .tl-chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:14px;background:rgba(15,17,21,.65);border-radius:12px;text-align:center;padding:20px;}
+  .tl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:760px){.tl-grid{grid-template-columns:1fr;}}
+  .tl-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
+    box-shadow:var(--shadow);margin-bottom:14px;}
+  .tl-panel .lbl{display:block;margin-bottom:10px;}
+  .tl-verdict-row{display:flex;align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap;}
+  .tl-verdict-icon{font-size:26px;}
+  .tl-verdict-label{font-size:21px;font-weight:800;}
+  .tl-conf{color:var(--muted);font-size:12.5px;margin-left:auto;}
+  .tl-gauge{position:relative;height:10px;background:#0007;border-radius:6px;}
+  .tl-gauge-fill{position:absolute;top:0;height:100%;border-radius:6px;}
+  .tl-gauge-mid{position:absolute;left:50%;top:-2px;width:2px;height:14px;background:var(--muted);}
+  .tl-gauge-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:6px;}
+  .tl-est{font-size:13.5px;margin-top:12px;line-height:1.5;}
+  .tl-factor{margin-bottom:12px;}
+  .tl-factor-hd{display:flex;justify-content:space-between;font-size:13px;font-weight:600;}
+  .tl-factor-hd i{color:var(--muted);font-weight:400;font-style:normal;font-size:11px;}
+  .tl-factor-bar{position:relative;height:5px;background:#0007;border-radius:4px;margin:5px 0 4px;}
+  .tl-factor-bar>div{position:absolute;top:0;height:100%;border-radius:4px;}
+  .tl-factor-txt{font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .tl-news-list{display:flex;flex-direction:column;gap:8px;}
+  .tl-news-item{display:flex;gap:8px;align-items:baseline;font-size:13px;color:var(--text);
+    text-decoration:none;padding:7px 10px;border-radius:8px;background:var(--panel2);}
+  .tl-news-item:hover{background:#242a35;}
+  .tl-news-title{flex:1;}
+  .tl-news-meta{color:var(--muted);font-size:11px;white-space:nowrap;}
+  .tl-open-btn{background:rgba(79,140,255,.15);color:var(--accent);border:1px solid rgba(79,140,255,.4);
+    padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;margin:4px 0 14px;}
+  .tl-open-btn:hover{background:rgba(79,140,255,.28);}
+
+  .mk-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .mk-now{font-size:13px;color:var(--muted);}
+  .mk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;margin-top:14px;}
+  .mk-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);}
+  .mk-card.open{border-color:rgba(62,207,142,.5);}
+  .mk-card-hd{display:flex;gap:10px;align-items:center;margin-bottom:8px;}
+  .mk-flag{font-size:20px;}
+  .mk-city{font-size:11.5px;color:var(--muted);}
+  .mk-dot{width:10px;height:10px;border-radius:50%;margin-left:auto;flex-shrink:0;}
+  .mk-status{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .mk-sess{font-size:12px;color:var(--muted);}
+  .mk-count{display:block;font-size:12px;color:var(--muted);margin-top:6px;}
+  .mk-count b{color:var(--text);}
+  .mk-timeline-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;box-shadow:var(--shadow);}
+  .mk-tl-wrap{position:relative;margin-top:12px;}
+  .mk-tl-rows{display:flex;flex-direction:column;gap:6px;}
+  .mk-tl-row{display:flex;align-items:center;gap:10px;}
+  .mk-tl-name{width:130px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;flex-shrink:0;}
+  .mk-live{color:var(--green);}
+  .mk-tl-track{position:relative;flex:1;height:14px;background:#0006;border-radius:4px;overflow:hidden;}
+  .mk-seg{position:absolute;top:0;height:100%;}
+  .mk-seg.main{background:rgba(62,207,142,.55);}
+  .mk-seg.ext{background:rgba(232,197,71,.3);}
+  .mk-tl-axis{position:relative;height:16px;margin-top:4px;font-size:10px;color:var(--muted);}
+  .mk-tl-axis span{position:absolute;transform:translateX(-50%);}
+  .mk-tl-now{position:absolute;top:-4px;bottom:14px;width:2px;background:var(--accent);}
+  .mk-tl-now span{position:absolute;top:-14px;left:-14px;font-size:10px;color:var(--accent);}
+  .mk-tl-legend{display:flex;gap:18px;font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .mk-seg-demo{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:5px;vertical-align:baseline;}
+  .mk-seg-demo.main{background:rgba(62,207,142,.55);}
+  .mk-seg-demo.ext{background:rgba(232,197,71,.3);}
+
+  .ev-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .ev-chip{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;
+    border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;}
+  .ev-chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .ev-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+  .ev-win{font-size:11px;color:var(--muted);margin-top:2px;}
+  .ev-custom-tag{font-size:10px;background:rgba(79,140,255,.15);color:var(--accent);padding:1px 6px;border-radius:8px;}
+
+  .st-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+  .st-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
+    box-shadow:var(--shadow);font-size:13px;line-height:1.55;}
+  .st-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:15px;}
+  .st-icon{font-size:20px;}
+  .st-horizon{margin-left:auto;font-size:11px;color:var(--muted);background:var(--panel2);
+    padding:3px 8px;border-radius:10px;white-space:nowrap;}
+  .st-row{margin-bottom:6px;color:var(--muted);}
+  .st-row b{color:var(--text);}
+  .st-fit{color:var(--text);}
+  .st-run{background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:8px;
+    font-size:13.5px;font-weight:600;cursor:pointer;}
+  .st-run:hover{opacity:.9;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>📈 Το Investment Copilot μου</h1>
-    <p class="sub">Προσωπικό εργαλείο ανίχνευσης &amp; παρακολούθησης μετοχών · V3 — θέσεις, προτάσεις &amp; live charts</p>
+    <p class="sub">Προσωπικό εργαλείο ανίχνευσης &amp; παρακολούθησης μετοχών · V4 — τάσεις &amp; πρόβλεψη, event patterns, στρατηγικές, παγκόσμιες αγορές</p>
   </header>
 
   <div class="disclaimer">
     <b>Σημαντικό:</b> Αυτό είναι εκπαιδευτικό εργαλείο βοήθειας απόφασης, όχι επενδυτική συμβουλή και όχι εγγύηση κέρδους.
     Τα scores βασίζονται σε δημόσια, δωρεάν δεδομένα (S&amp;P Global Market Intelligence μέσω stockanalysis.com) και σε
     έναν καθορισμένο, διαφανή τύπο — δες μεθοδολογία στο τέλος. Τα live charts παρέχονται από TradingView (δωρεάν widget,
-    ενδεικτικές/καθυστερημένες τιμές ανάλογα με το exchange). <b>V3 limitations:</b> universe περιορισμένο σε 59 μεγάλες
-    εταιρείες του S&amp;P 500 (όχι όλη η αγορά), χωρίς ανάλυση ειδήσεων/sentiment ακόμα. Κάθε επενδυτική απόφαση παραμένει
-    δική σου ευθύνη.
+    ενδεικτικές/καθυστερημένες τιμές ανάλογα με το exchange). Η <b>"Πρόβλεψη τάσης"</b> είναι στατιστική εκτίμηση από
+    ιστορικές τιμές + τόνο ειδήσεων — δείχνει πιθανή κατεύθυνση, δεν προβλέπει το μέλλον και δεν είναι σύσταση
+    αγοράς/πώλησης. <b>Limitations:</b> universe 79 μεγάλες εταιρείες του S&amp;P 500 (όχι όλη η αγορά), χωρίς αργίες
+    χρηματιστηρίων στο tab Αγορών. Κάθε επενδυτική απόφαση παραμένει δική σου ευθύνη.
   </div>
 
   <details class="help">
@@ -200,15 +302,23 @@
   <div class="tabs">
     <div class="tab" data-tab="positions">💼 Οι Θέσεις Μου</div>
     <div class="tab" data-tab="suggestions">🔍 Προτάσεις</div>
-    <div class="tab active" data-tab="long">🏛️ Μακροπρόθεσμο Top 10 (Value/Quality)</div>
-    <div class="tab" data-tab="swing">⚡ Swing Top 10 (Momentum/Technical)</div>
+    <div class="tab" data-tab="trend">📊 Τάσεις &amp; Πρόβλεψη</div>
+    <div class="tab active" data-tab="long">🏛️ Long-Term Top 10</div>
+    <div class="tab" data-tab="swing">⚡ Swing Top 10</div>
     <div class="tab" data-tab="all">📋 Όλες οι μετοχές</div>
+    <div class="tab" data-tab="events">🗓️ Event Patterns</div>
+    <div class="tab" data-tab="strategies">🧭 Στρατηγικές</div>
+    <div class="tab" data-tab="markets">🕒 Αγορές</div>
     <div class="tab" data-tab="journal">📓 Journal</div>
   </div>
 
   <div id="positions" class="positions" style="display:none;"></div>
   <div id="suggestions" style="display:none;"></div>
   <div id="journal" style="display:none;"></div>
+  <div id="trendlab" style="display:none;"></div>
+  <div id="events" style="display:none;"></div>
+  <div id="strategies" style="display:none;"></div>
+  <div id="markets" style="display:none;"></div>
   <div id="cards" class="cards"></div>
   <div id="table-wrap" style="display:none;overflow-x:auto;">
     <table id="table">
@@ -238,8 +348,17 @@
     <p><b>Νέο σε V2:</b> tab "Οι Θέσεις Μου" με τις πραγματικές demo θέσεις (Trading212 Invest/Practice) και live
     candlestick charts (TradingView) σε κάθε μετοχή — πάτα πάνω σε οποιαδήποτε κάρτα/γραμμή για να δεις το chart μαζί
     με τους δείκτες.</p>
-    <p><b>Δεν περιλαμβάνεται ακόμα (V3 roadmap):</b> ανάλυση ειδήσεων/sentiment, ευρύτερο universe (mid/small caps),
-    backtesting, sector-relative ranking, ρεαλιστικό position sizing βάσει risk, αυτόματο sync θέσεων μέσω Trading212 API.</p>
+    <p><b>Νέο σε V4:</b> (1) <b>Τάσεις &amp; Πρόβλεψη</b> — custom chart με αυτόματο κανάλι στήριξης/αντίστασης,
+    στατιστική προβολή 20 συνεδριάσεων και σύνθετη εκτίμηση τάσης που συνδυάζει κλίση τάσης, δομή ΜΑ, RSI, θέση στο
+    κανάλι και sentiment ειδήσεων (news.json, ανανεώνεται αυτόματα)· (2) <b>Event Patterns</b> — μέση ιστορική πορεία
+    της μετοχής ±21 συνεδριάσεις γύρω από μεγάλες παρουσιάσεις προϊόντων (Apple/Tesla/NVIDIA/Meta/Alphabet/Microsoft/AMD),
+    με win rates και δυνατότητα δικών σου events· (3) <b>Στρατηγικές</b> — σύγκριση στρατηγικών με mini backtest σε
+    πραγματικό ιστορικό και υπολογιστή μεγέθους θέσης βάσει ρίσκου· (4) <b>Αγορές</b> — ώρες συνεδρίασης 11
+    χρηματιστηρίων παγκοσμίως με live status και 24ωρο timeline στην ώρα σου· (5) <b>αυτόματο sync θέσεων</b> από το
+    Trading212 API (θέσεις, μέση τιμή, P&amp;L, μετρητά — μέσω GitHub Action κάθε 2 ώρες, χρειάζεται το secret
+    T212_API_KEY). Ιστορικά τιμών: stockanalysis.com API (client-side, με τοπικό cache 6 ωρών).</p>
+    <p><b>Δεν περιλαμβάνεται ακόμα (roadmap):</b> ευρύτερο universe (mid/small caps), sector-relative ranking,
+    ειδοποιήσεις (alerts) σε σπάσιμο καναλιού, ημερολόγιο earnings.</p>
   </footer>
 </div>
 
@@ -248,6 +367,11 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
+<script src="assets/analysis.js"></script>
+<script src="assets/trendlab.js"></script>
+<script src="assets/markets.js"></script>
+<script src="assets/events.js"></script>
+<script src="assets/strategies.js"></script>
 <script>
 let DATA = [];
 
@@ -260,6 +384,7 @@ const POSITIONS = [
    stop:87.70, stopNote:"Stop-loss ≈ -6% από την τιμή εισόδου.",
    date:"17/07/2026", status:"Εκτελέστηκε — πραγματική τιμή γεμίσματος: $92.14 (€80.64/μετοχή)"}
 ];
+window.POSITIONS = POSITIONS;
 
 function tvSymbol(ticker){
   // Bare ticker — το TradingView widget κάνει auto-resolve στη βασική/πιο γνωστή λίστα για μεγάλες US εταιρείες.
@@ -363,8 +488,62 @@ function renderPortfolioSummary(){
   </div>`;
 }
 
+// ---- Live θέσεις από Trading212 (positions.json — γράφεται από το αυτόματο sync) ----
+function renderLiveSummary(t){
+  const c = t.cash || {};
+  const inv = c.invested, ppl = c.ppl;
+  const now = (inv!=null && ppl!=null) ? inv+ppl : null;
+  const pct = (inv && ppl!=null) ? ppl/inv*100 : null;
+  const col = (ppl||0)>=0 ? 'var(--green)' : 'var(--red)';
+  return `<div class="pf-summary">
+    <div class="pf-box"><div class="lbl">Επενδεδυμένο</div><div class="val">€${inv!=null?inv.toFixed(2):'—'}</div></div>
+    <div class="pf-box"><div class="lbl">Αξία θέσεων τώρα</div><div class="val">€${now!=null?now.toFixed(2):'—'}</div></div>
+    <div class="pf-box"><div class="lbl">P&amp;L</div><div class="val" style="color:${col}">${ppl!=null?pfFmtEUR(ppl):'—'}${pct!=null?` (${ppl>=0?'+':''}${pct.toFixed(2)}%)`:''}</div></div>
+    <div class="pf-box"><div class="lbl">Διαθέσιμα μετρητά</div><div class="val">€${c.free!=null?c.free.toFixed(2):'—'}</div></div>
+  </div>`;
+}
+
+function renderLivePositions(wrap){
+  const t = window.T212;
+  const manualByTicker = {};
+  POSITIONS.forEach(p=>{ manualByTicker[p.ticker] = p; });
+  const cards = t.positions.map(p=>{
+    const d = DATA.find(x=>x.ticker===p.ticker) || {};
+    const m = manualByTicker[p.ticker];
+    const pct = (p.avg_price && p.current_price) ? (p.current_price-p.avg_price)/p.avg_price*100 : null;
+    const col = (p.ppl||0)>=0 ? 'var(--green)' : 'var(--red)';
+    return `
+    <div class="pos-card">
+      <div class="pos-hd">
+        <div>
+          <div class="tk">${p.ticker} <span style="font-size:13px;color:var(--muted);font-weight:400;">${d.name||''}</span></div>
+          ${m?`<div class="pos-strategy">${m.strategy}</div>`:''}
+        </div>
+        <div class="pos-stats">
+          <div><span>Μετοχές</span>${p.quantity!=null?p.quantity:'—'}</div>
+          <div><span>Μέση τιμή εισόδου</span>${p.avg_price!=null?('$'+p.avg_price):'—'}</div>
+          <div><span>Τιμή στο sync</span>${p.current_price!=null?('$'+p.current_price):'—'}</div>
+          <div><span>Απόδοση (σε $)</span><span style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct!=null?(pct>=0?'+':'')+pct.toFixed(2)+'%':'—'}</span></div>
+          <div><span>P&amp;L (€, με FX)</span><span style="color:${col}">${p.ppl!=null?pfFmtEUR(p.ppl):'—'}</span></div>
+          <div><span>Stop-loss</span>${m&&m.stop?('$'+m.stop):'—'}</div>
+        </div>
+      </div>
+      <div class="chart-holder" data-ticker="${p.ticker}"></div>
+      <div class="note">${p.since?`Άνοιξε ${p.since} · `:''}${m?m.stopNote+' · ':''}Συγχρονισμένο αυτόματα από Trading212.</div>
+    </div>`;
+  }).join('');
+  const syncNote = `<div class="cat-desc">🔄 Αυτόματο sync από Trading212 (${t.mode==='demo'?'practice/demo':'live'}) ·
+    τελευταίο: ${formatUpdated(t.last_updated)}</div>`;
+  wrap.innerHTML = syncNote + renderLiveSummary(t) + `<div class="positions">${cards}</div>`;
+  wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
+}
+
 function renderPositions(){
   const wrap = document.getElementById('positions');
+  if(window.T212 && Array.isArray(window.T212.positions) && window.T212.positions.length){
+    renderLivePositions(wrap);
+    return;
+  }
   if(POSITIONS.length===0){
     wrap.innerHTML = `<div class="pos-empty">Δεν έχεις καταγεγραμμένες θέσεις ακόμα.</div>`;
     return;
@@ -397,7 +576,9 @@ function renderPositions(){
       <div class="note">${p.stopNote} · ${p.status}</div>
     </div>`;
   }).join('');
-  wrap.innerHTML = renderPortfolioSummary() + `<div class="positions">${cardsHtml}</div>`;
+  const manualNote = `<div class="cat-desc">✍️ Χειροκίνητα καταχωρημένες θέσεις — για αυτόματο sync από το
+    Trading212, όρισε το secret <b>T212_API_KEY</b> στο GitHub repo (οδηγίες στο README).</div>`;
+  wrap.innerHTML = manualNote + renderPortfolioSummary() + `<div class="positions">${cardsHtml}</div>`;
   wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
 }
 
@@ -544,12 +725,12 @@ function renderTable(list){
 function applyTab(tab, list){
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  document.getElementById('positions').style.display = 'none';
-  document.getElementById('suggestions').style.display = 'none';
-  document.getElementById('journal').style.display = 'none';
+  ['positions','suggestions','journal','trendlab','events','strategies','markets']
+    .forEach(id=>document.getElementById(id).style.display = 'none');
   document.getElementById('cards').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'none';
-  document.getElementById('search').style.display = (tab==='positions'||tab==='suggestions'||tab==='journal') ? 'none' : '';
+  const noSearch = ['positions','suggestions','journal','trend','events','strategies','markets'];
+  document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
   if(tab==='positions'){
     document.getElementById('positions').style.display = 'flex';
     renderPositions();
@@ -561,6 +742,22 @@ function applyTab(tab, list){
   else if(tab==='journal'){
     document.getElementById('journal').style.display = 'block';
     renderJournal();
+  }
+  else if(tab==='trend'){
+    document.getElementById('trendlab').style.display = 'block';
+    window.TrendLab && TrendLab.render();
+  }
+  else if(tab==='events'){
+    document.getElementById('events').style.display = 'block';
+    window.Events && Events.render();
+  }
+  else if(tab==='strategies'){
+    document.getElementById('strategies').style.display = 'block';
+    window.Strategies && Strategies.render();
+  }
+  else if(tab==='markets'){
+    document.getElementById('markets').style.display = 'block';
+    window.Markets && Markets.render();
   }
   else if(tab==='long') renderCards(list,'long_term_score');
   else if(tab==='swing') renderCards(list,'swing_score');
@@ -594,6 +791,7 @@ function openModal(ticker){
     <span class="close" onclick="closeModal()">✕</span>
     <h2>${d.ticker}</h2>
     <div class="company">${d.name||''} · ${d.market_cap||''} market cap · $${fmt(d.price)}</div>
+    <button class="tl-open-btn" onclick="openTrendLab('${d.ticker}')">📊 Ανάλυση τάσης &amp; πρόβλεψη</button>
     <div class="score-grid">
       <div class="score-box">
         <div class="lbl">Long-Term Score</div>
@@ -642,10 +840,28 @@ function formatUpdated(iso){
   }catch(e){ return iso; }
 }
 
+// Ειδήσεις/sentiment (τροφοδοτεί το Trend Lab) — προαιρετικό, δεν μπλοκάρει το site
+window.NEWS = null;
+fetch('news.json?_=' + Date.now())
+  .then(r=> r.ok ? r.json() : null)
+  .then(json=>{ window.NEWS = json; })
+  .catch(()=>{ /* χωρίς ειδήσεις — το Trend Lab προσαρμόζεται */ });
+
+// Live θέσεις Trading212 (γράφεται από το workflow "Sync θέσεων") — προαιρετικό
+window.T212 = null;
+fetch('positions.json?_=' + Date.now())
+  .then(r=> r.ok ? r.json() : null)
+  .then(json=>{
+    window.T212 = json;
+    if(json && currentTab==='positions') refresh();
+  })
+  .catch(()=>{ /* χωρίς sync — fallback στα χειροκίνητα POSITIONS */ });
+
 fetch('data.json?_=' + Date.now())
   .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(json=>{
     DATA = json.stocks || [];
+    window.DATA = DATA;
     document.getElementById('updated-date').textContent = formatUpdated(json.last_updated);
     document.getElementById('universe-count').textContent = DATA.length + ' μετοχές';
     applyTab(currentTab, filteredData());
