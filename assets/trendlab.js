@@ -285,7 +285,16 @@ window.TrendLab = (function () {
       <div class="tl-gauge-scale"><span>-100 bearish</span><span>0</span><span>+100 bullish</span></div>
       <div class="tl-est">Εκτιμώμενο εύρος σε ${HORIZON} συνεδριάσεις:
         <b>$${fmt2(end.dn)} — $${fmt2(end.up)}</b> (μέση εκτίμηση $${fmt2(end.mid)})</div>
+      ${earnWarning()}
       <div class="tl-factor-txt" style="margin-top:10px;">Συνοπτικά: ${pred.factors.map(f => f.text).join(' · ')}.</div>`;
+  }
+
+  function earnWarning() {
+    const e = A.earningsInfo(state.ticker, 20);
+    if (!e) return '';
+    const when = e.days === 0 ? 'ΣΗΜΕΡΑ' : e.days === 1 ? 'αύριο' : `σε ${e.days} μέρες (${e.date})`;
+    return `<div class="tl-factor-txt" style="color:var(--yellow);margin-top:10px;">⚠️ Earnings ${when} —
+      γύρω από τα αποτελέσματα η μεταβλητότητα συχνά ξεπερνά κατά πολύ το εκτιμώμενο εύρος, προς οποιαδήποτε κατεύθυνση.</div>`;
   }
 
   function fmt2(v) { return v >= 1000 ? v.toFixed(0) : v.toFixed(2); }

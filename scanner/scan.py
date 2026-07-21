@@ -299,6 +299,19 @@ def _devalue_resolve(data, i, depth=0):
     return v
 
 
+_MONTHS = {m: i for i, m in enumerate(
+    ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
+
+
+def _parse_us_date(t):
+    """'Jul 30, 2026' -> '2026-07-30' (αλλιώς None)."""
+    m = re.match(r"([A-Z][a-z]{2}) (\d{1,2}), (\d{4})", (t or "").strip())
+    if not m or m.group(1) not in _MONTHS:
+        return None
+    return f"{int(m.group(3)):04d}-{_MONTHS[m.group(1)]:02d}-{int(m.group(2)):02d}"
+
+
 def _parse_news_time(t):
     """'2026-07-21T15:20:11.000Z' -> epoch· αλλιώς προσπάθησε 'Jul 20, 2026, ...'."""
     if not t:
@@ -326,13 +339,14 @@ def _parse_news_time(t):
 
 
 def fetch_news(ticker):
-    """Επιστρέφει λίστα από {t: τίτλος, d: ISO ημερομηνία, s: sentiment, src, u: url}."""
+    """Επιστρέφει (λίστα από {t, d, s, src, u}, earnings_date ISO ή None)."""
     slug = ticker.lower().replace(".", "-")
     url = f"https://stockanalysis.com/stocks/{slug}/__data.json"
     req = Request(url, headers=HEADERS)
     with _urlopen(req) as resp:
         raw = json.loads(resp.read())
     items = []
+    earnings = None
     for node in raw.get("nodes", []):
         if not node or node.get("type") != "data":
             continue
@@ -342,6 +356,10 @@ def fetch_news(ticker):
                 it = _devalue_resolve(data, i)
                 if it and isinstance(it.get("title"), str):
                     items.append(it)
+            elif isinstance(v, dict) and "earningsDate" in v and earnings is None:
+                idx = v["earningsDate"]
+                val = data[idx] if isinstance(idx, int) and 0 <= idx < len(data) else None
+                earnings = _parse_us_date(val)
     out = []
     for it in items:
         title = it["title"].strip()
@@ -355,10 +373,10 @@ def fetch_news(ticker):
             "src": it.get("source"),
             "u": it.get("url"),
         })
-    return out
+    return out, earnings
 
 
-def ticker_news_summary(items):
+def ticker_news_summary(items, earnings=None):
     """Συνολικό sentiment -100..+100 με βάρος πρόσφατο (half-life 3 μέρες)."""
     now = time.time()
     wsum, wtot = 0.0, 0.0
@@ -369,7 +387,8 @@ def ticker_news_summary(items):
         wtot += w
     score = round((wsum / wtot) * 100) if wtot > 0 else 0
     headlines = [{k: it[k] for k in ("t", "d", "s", "src", "u")} for it in items[:12]]
-    return {"score": score, "n": len(items), "headlines": headlines}
+    return {"score": score, "n": len(items), "headlines": headlines,
+            "earnings_date": earnings}
 
 
 def scan_news(delay=1.0):
@@ -383,10 +402,10 @@ def scan_news(delay=1.0):
     tickers_out = {}
     for i, ticker in enumerate(TICKERS, 1):
         try:
-            items = fetch_news(ticker)
-            tickers_out[ticker] = ticker_news_summary(items)
+            items, earnings = fetch_news(ticker)
+            tickers_out[ticker] = ticker_news_summary(items, earnings)
             print(f"[{i}/{len(TICKERS)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
-                  f"sentiment {tickers_out[ticker]['score']:+d}")
+                  f"sentiment {tickers_out[ticker]['score']:+d}, earnings {earnings or '—'}")
         except Exception as e:
             print(f"  ! news {ticker}: {e} — κρατάω παλιά δεδομένα")
             if ticker in previous:

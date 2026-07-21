@@ -20,8 +20,9 @@
 │   │                     #   win rates, custom events σε localStorage
 │   ├── strategies.js     # Tab "Στρατηγικές": οδηγός 5 στρατηγικών, mini backtest σε
 │   │                     #   πραγματικό ιστορικό, υπολογιστής μεγέθους θέσης βάσει ρίσκου
-│   └── markets.js        # Tab "Αγορές": ώρες 11 χρηματιστηρίων παγκοσμίως, DST-aware,
-│                         #   live status, countdown, 24ωρο timeline στην τοπική ώρα
+│   └── markets.js        # Tab "Αγορές & Earnings": ώρες 11 χρηματιστηρίων (DST-aware,
+│                         #   live status, 24ωρο timeline) + ημερολόγιο επερχόμενων
+│                         #   earnings του universe (πηγή: earningsDate στο news.json)
 ├── data.json             # Scores/θεμελιώδη ανά μετοχή (γράφεται από scanner/scan.py)
 ├── news.json             # Ειδήσεις + sentiment ανά μετοχή (γράφεται από scanner/scan.py)
 ├── positions.json        # Live θέσεις από Trading212 (γράφεται από το sync — δεν υπάρχει

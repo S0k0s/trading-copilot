@@ -417,10 +417,27 @@ window.Analysis = (function () {
     return ticks;
   }
 
+  /* ------------- Earnings helper ----------------------------------------- */
+
+  /**
+   * Επόμενα earnings του ticker (από το news.json): {date: 'YYYY-MM-DD', days}
+   * ή null αν δεν υπάρχει ημερομηνία, έχει περάσει, ή είναι πέρα από maxDays.
+   */
+  function earningsInfo(ticker, maxDays) {
+    const n = window.NEWS && window.NEWS.tickers && window.NEWS.tickers[ticker];
+    const d = n && n.earnings_date;
+    if (!d) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    // μεσάνυχτα - μεσάνυχτα: ακέραιες μέρες (το round καλύπτει το ±1h της αλλαγής ώρας)
+    const days = Math.round((new Date(d + 'T00:00:00') - today) / 86400000);
+    if (days < 0 || (maxDays != null && days > maxDays)) return null;
+    return { date: d, days };
+  }
+
   return {
     fetchHistory, sma, rsi, atr, linreg,
     findPivots, detectChannel, projection, predictTrend,
     btBuyHold, btMaTrend, btPullback,
-    setupCanvas, niceTicks, clamp,
+    setupCanvas, niceTicks, clamp, earningsInfo,
   };
 })();

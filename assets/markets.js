@@ -131,7 +131,8 @@ window.Markets = (function () {
       <div id="mk-cards" class="mk-cards"></div>
       <div class="note">Οι ώρες αφορούν κανονικές συνεδριάσεις Δευτέρα–Παρασκευή και προσαρμόζονται αυτόματα σε
       θερινή/χειμερινή ώρα κάθε χώρας. Δεν περιλαμβάνονται τοπικές αργίες. Για NYSE/NASDAQ εμφανίζεται και
-      pre-market (04:00–09:30 ΝΥ) / after-hours (16:00–20:00 ΝΥ).</div>`;
+      pre-market (04:00–09:30 ΝΥ) / after-hours (16:00–20:00 ΝΥ).</div>
+      <div id="mk-earnings"></div>`;
     initialized = true;
   }
 
@@ -204,6 +205,62 @@ window.Markets = (function () {
       </div>`;
   }
 
+  /* ---------------- Ημερολόγιο earnings ---------------------------------- */
+
+  function fmtGrDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    const wd = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'][d.getDay()];
+    return wd + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function renderEarnings() {
+    const el = document.getElementById('mk-earnings');
+    if (!el) return;
+    const news = window.NEWS && window.NEWS.tickers;
+    if (!news) {
+      el.innerHTML = `<div class="section-hd">📅 Επερχόμενα Earnings</div>
+        <div class="tl-factor-txt">Δεν φόρτωσαν οι ημερομηνίες (news.json) — θα εμφανιστούν με το επόμενο αυτόματο scan.</div>`;
+      return;
+    }
+    const posSet = new Set();
+    if (window.T212 && Array.isArray(window.T212.positions)) window.T212.positions.forEach(p => posSet.add(p.ticker));
+    (window.POSITIONS || []).forEach(p => posSet.add(p.ticker));
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const rows = [];
+    for (const tk of Object.keys(news)) {
+      const iso = news[tk].earnings_date;
+      if (!iso) continue;
+      const days = Math.round((new Date(iso + 'T00:00:00') - today) / 86400000);
+      if (days < 0 || days > 60) continue;
+      const stock = (window.DATA || []).find(x => x.ticker === tk) || {};
+      rows.push({ tk, name: stock.name || '', date: iso, days, mine: posSet.has(tk) });
+    }
+    rows.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.tk.localeCompare(b.tk));
+
+    const chip = (days) => days === 0 ? '<span class="earn-chip hot">ΣΗΜΕΡΑ</span>'
+      : days === 1 ? '<span class="earn-chip hot">αύριο</span>'
+      : days <= 7 ? `<span class="earn-chip soon">σε ${days} μέρες</span>`
+      : `<span class="earn-chip">σε ${days} μέρες</span>`;
+
+    let lastDate = null;
+    const list = rows.map(r => {
+      const hd = r.date !== lastDate ? `<div class="earn-date">${fmtGrDate(r.date)}</div>` : '';
+      lastDate = r.date;
+      return hd + `<div class="earn-row" onclick="openTrendLab('${r.tk}')">
+        <b>${r.tk}</b><span class="earn-name">${r.name}</span>
+        ${r.mine ? '<span class="earn-chip mine">💼 έχεις θέση</span>' : ''}
+        ${chip(r.days)}
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="section-hd">📅 Επερχόμενα Earnings — επόμενες 60 μέρες (${rows.length} μετοχές του universe)</div>
+      <div class="cat-desc">Η μέρα που η εταιρεία ανακοινώνει τριμηνιαία αποτελέσματα — συνήθως η πιο ευμετάβλητη
+      μέρα του τριμήνου για τη μετοχή. Πάτα σε μια γραμμή για ανάλυση τάσης. Οι δικές σου θέσεις σημειώνονται με 💼.</div>
+      <div class="tl-panel earn-list">${list || '<div class="tl-factor-txt">Καμία γνωστή ημερομηνία στο επόμενο δίμηνο.</div>'}</div>`;
+  }
+
   function tick() {
     const visible = document.getElementById('markets').style.display !== 'none';
     if (!visible) return;
@@ -215,6 +272,7 @@ window.Markets = (function () {
     ensureSkeleton();
     renderCards();
     renderTimeline();
+    renderEarnings();
     tick();
     if (!timer) {
       timer = setInterval(() => {
