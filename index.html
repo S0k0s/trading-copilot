@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Screener — Η Βίβλος Επενδύσεων</title>
+<title>Investment Copilot</title>
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Copilot">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
@@ -11,7 +21,7 @@
     --yellow:#e8c547; --red:#e5626b; --shadow:0 4px 20px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box;}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg);color:var(--text);}
   .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
   header{margin-bottom:20px;}
@@ -22,13 +32,43 @@
   .disclaimer b{color:#ffe9a8;}
   .meta-row{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:20px;}
   .meta-row span b{color:var(--text);}
-  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .tabs,.subtabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
   .tab{background:var(--panel);border:1px solid var(--border);color:var(--muted);
     padding:9px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;}
   .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
   .search{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
     background:var(--panel);color:var(--text);font-size:14px;margin-bottom:16px;}
   .search::placeholder{color:var(--muted);}
+
+  /* --- V5: 4-section nav, global search, mobile bottom bar --- */
+  .gsearch-wrap{position:relative;margin-bottom:18px;}
+  .gsearch{width:100%;padding:13px 16px;border-radius:12px;border:1px solid var(--border);
+    background:var(--panel);color:var(--text);font-size:15px;box-shadow:var(--shadow);}
+  .gsearch:focus{outline:none;border-color:var(--accent);}
+  .gsearch::placeholder{color:var(--muted);}
+  .gsearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);
+    border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:70;
+    max-height:380px;overflow-y:auto;display:none;}
+  .gsearch-results.show{display:block;}
+  .gsearch-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:13.5px;}
+  .gsearch-item:hover{background:var(--panel2);}
+  .gsearch-item .tk{font-weight:700;min-width:58px;}
+  .gsearch-item .nm{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gsearch-item .gq{font-size:10.5px;color:var(--green);font-weight:700;white-space:nowrap;}
+  .gsearch-empty{padding:16px;color:var(--muted);font-size:13px;text-align:center;}
+
+  .nav-groups{display:flex;gap:8px;margin-bottom:12px;}
+  .nav-group{flex:1;text-align:center;background:var(--panel);border:1px solid var(--border);color:var(--muted);
+    padding:13px 10px;border-radius:10px;cursor:pointer;font-size:14.5px;font-weight:600;transition:.15s;}
+  .nav-group:hover{border-color:var(--accent);color:var(--text);}
+  .nav-group.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  @media(max-width:700px){
+    body{padding-bottom:74px;}
+    .nav-groups{position:fixed;left:0;right:0;bottom:0;margin:0;gap:4px;z-index:60;
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+      background:var(--panel);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.35);}
+    .nav-group{padding:9px 3px;font-size:11px;border-radius:8px;}
+  }
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
     cursor:pointer;transition:.15s;box-shadow:var(--shadow);}
@@ -242,6 +282,25 @@
     font-size:13.5px;font-weight:600;cursor:pointer;}
   .st-run:hover{opacity:.9;}
 
+  /* «Σήμερα» — αρχική οθόνη */
+  .tdy-greet{font-size:21px;font-weight:700;margin-bottom:16px;}
+  .tdy-greet span{font-weight:400;color:var(--muted);font-size:14px;margin-left:10px;}
+  .tdy-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  @media(max-width:760px){.tdy-grid{grid-template-columns:1fr;}}
+  .tdy-pf-row{display:flex;gap:24px;flex-wrap:wrap;margin:10px 0;}
+  .tdy-pf-row .tdy-lbl{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .tdy-pf-row b{font-size:16px;}
+  .tdy-mkt-row{display:flex;flex-direction:column;gap:9px;margin:10px 0;font-size:13.5px;}
+  .tdy-mkt i{color:var(--muted);font-style:normal;margin-left:5px;}
+  .tdy-link{font-size:12.5px;color:var(--accent);cursor:pointer;margin-top:6px;display:inline-block;}
+  .tdy-link:hover{text-decoration:underline;}
+  .tdy-quest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0;}
+  .tdy-quest-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;
+    cursor:pointer;font-size:13px;}
+  .tdy-quest-card:hover{border-color:var(--green);}
+  .tdy-quest-card b{display:block;font-size:15px;}
+  .tdy-quest-card span{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+
   /* Earnings ημερολόγιο + badges */
   .earn-badge{display:inline-block;background:rgba(229,98,107,.15);color:var(--red);
     border:1px solid rgba(229,98,107,.4);padding:3px 10px;border-radius:20px;font-size:11px;
@@ -327,21 +386,22 @@
   </div>
   <div id="load-error" class="disclaimer" style="display:none;background:#2a1414;border-color:#5c2a2a;color:#f0b8b8;"></div>
 
-  <input class="search" id="search" placeholder="Αναζήτηση ticker ή εταιρείας... (π.χ. AAPL, Nvidia)">
-
-  <div class="tabs">
-    <div class="tab" data-tab="positions">💼 Οι Θέσεις Μου</div>
-    <div class="tab" data-tab="suggestions">🔍 Προτάσεις</div>
-    <div class="tab" data-tab="trend">📊 Τάσεις &amp; Πρόβλεψη</div>
-    <div class="tab active" data-tab="long">🏛️ Long-Term Top 10</div>
-    <div class="tab" data-tab="swing">⚡ Swing Top 10</div>
-    <div class="tab" data-tab="all">📋 Όλες οι μετοχές</div>
-    <div class="tab" data-tab="events">🗓️ Event Patterns</div>
-    <div class="tab" data-tab="strategies">🧭 Στρατηγικές</div>
-    <div class="tab" data-tab="markets">🕒 Αγορές &amp; Earnings</div>
-    <div class="tab" data-tab="journal">📓 Journal</div>
+  <div class="gsearch-wrap">
+    <input class="gsearch" id="gsearch" placeholder="🔍 Γρήγορη αναζήτηση μετοχής — ticker ή όνομα (π.χ. AAPL, Nvidia)...">
+    <div class="gsearch-results" id="gsearch-results"></div>
   </div>
 
+  <nav class="nav-groups" id="nav-groups">
+    <div class="nav-group active" data-group="today">🏠 Σήμερα</div>
+    <div class="nav-group" data-group="scanner">🔎 Σκάνερ</div>
+    <div class="nav-group" data-group="analysis">📊 Ανάλυση</div>
+    <div class="nav-group" data-group="portfolio">💼 Χαρτοφυλάκιο</div>
+  </nav>
+  <div class="subtabs" id="subtabs" style="display:none;"></div>
+
+  <input class="search" id="search" placeholder="Αναζήτηση ticker ή εταιρείας... (π.χ. AAPL, Nvidia)" style="display:none;">
+
+  <div id="today" style="display:none;"></div>
   <div id="positions" class="positions" style="display:none;"></div>
   <div id="suggestions" style="display:none;"></div>
   <div id="journal" style="display:none;"></div>
@@ -405,11 +465,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js"></script>
-<script src="assets/trendlab.js"></script>
-<script src="assets/markets.js"></script>
-<script src="assets/events.js"></script>
-<script src="assets/strategies.js"></script>
+<script src="assets/analysis.js?v=5"></script>
+<script src="assets/trendlab.js?v=5"></script>
+<script src="assets/markets.js?v=5"></script>
+<script src="assets/events.js?v=5"></script>
+<script src="assets/strategies.js?v=5"></script>
+<script src="assets/today.js?v=5"></script>
 <script>
 let DATA = [];
 
@@ -723,8 +784,56 @@ function fmt(v,suffix){
   return v + (suffix||'');
 }
 
-let currentTab = 'long';
+let currentTab = 'today';
+let currentGroup = 'today';
 let sortKey = 'long_term_score', sortDir = -1;
+
+// --- V5: 4 ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
+const GROUPS = {
+  scanner:   { tabs: ['long','swing','suggestions','all'] },
+  analysis:  { tabs: ['trend','events','strategies'] },
+  portfolio: { tabs: ['positions','markets','journal'] },
+};
+const TAB_LABELS = {
+  long: '🏛️ Long-Term Top 10', swing: '⚡ Swing Top 10', suggestions: '🔍 Προτάσεις', all: '📋 Όλες οι μετοχές',
+  trend: '📊 Τάσεις &amp; Πρόβλεψη', events: '🗓️ Event Patterns', strategies: '🧭 Στρατηγικές',
+  positions: '💼 Οι Θέσεις Μου', markets: '🕒 Αγορές &amp; Earnings', journal: '📓 Journal',
+};
+const lastTabByGroup = {};
+
+function tabToGroup(tab){
+  if(tab==='today') return 'today';
+  for(const g in GROUPS){ if(GROUPS[g].tabs.includes(tab)) return g; }
+  return 'today';
+}
+
+function renderSubtabs(group){
+  const el = document.getElementById('subtabs');
+  const info = GROUPS[group];
+  if(!info){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = info.tabs.map(t=>`<div class="tab" data-tab="${t}">${TAB_LABELS[t]}</div>`).join('');
+  el.querySelectorAll('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.tab));
+}
+
+function selectTab(tab){
+  const targetGroup = tabToGroup(tab);
+  lastTabByGroup[targetGroup] = tab;
+  if(targetGroup !== currentGroup){
+    currentGroup = targetGroup;
+    document.querySelectorAll('.nav-group').forEach(g=>g.classList.toggle('active', g.dataset.group===currentGroup));
+    renderSubtabs(targetGroup==='today' ? null : targetGroup);
+  }
+  applyTab(tab, filteredData());
+}
+
+document.querySelectorAll('.nav-group').forEach(g=>{
+  g.onclick = () => {
+    const grp = g.dataset.group;
+    const tab = grp==='today' ? 'today' : (lastTabByGroup[grp] || GROUPS[grp].tabs[0]);
+    selectTab(tab);
+  };
+});
 
 function renderCards(list, scoreKey){
   const cards = document.getElementById('cards');
@@ -773,13 +882,17 @@ function renderTable(list){
 function applyTab(tab, list){
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  ['positions','suggestions','journal','trendlab','events','strategies','markets']
+  ['today','positions','suggestions','journal','trendlab','events','strategies','markets']
     .forEach(id=>document.getElementById(id).style.display = 'none');
   document.getElementById('cards').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'none';
-  const noSearch = ['positions','suggestions','journal','trend','events','strategies','markets'];
+  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','markets'];
   document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
-  if(tab==='positions'){
+  if(tab==='today'){
+    document.getElementById('today').style.display = 'block';
+    window.Today && Today.render();
+  }
+  else if(tab==='positions'){
     document.getElementById('positions').style.display = 'flex';
     renderPositions();
   }
@@ -820,7 +933,6 @@ function filteredData(){
 
 function refresh(){ applyTab(currentTab, filteredData()); }
 
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>refresh(t.dataset.tab) || applyTab(t.dataset.tab, filteredData()));
 document.getElementById('search').addEventListener('input', ()=>{
   if(currentTab==='all') refresh();
   else applyTab(currentTab, filteredData());
@@ -829,6 +941,51 @@ document.querySelectorAll('thead th').forEach(th=>th.onclick=()=>{
   const k = th.dataset.k;
   if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=-1;}
   renderTable(filteredData());
+});
+
+// ---- Καθολική αναζήτηση: γράψε ticker/όνομα από οπουδήποτε -> ανοίγει ανάλυση τάσης ----
+function renderGSearchResults(items){
+  const el = document.getElementById('gsearch-results');
+  if(!items.length){
+    el.innerHTML = '<div class="gsearch-empty">Δεν βρέθηκε μετοχή στο universe.</div>';
+    el.classList.add('show');
+    return;
+  }
+  el.innerHTML = items.slice(0,8).map(d=>`
+    <div class="gsearch-item" data-ticker="${d.ticker}">
+      <span class="tk">${d.ticker}</span><span class="nm">${d.name||''}</span>
+      ${d.quest_pass===5?'<span class="gq">🎯 5/5</span>':''}
+    </div>`).join('');
+  el.classList.add('show');
+  el.querySelectorAll('.gsearch-item').forEach(it=>it.onclick=()=>{
+    openTrendLab(it.dataset.ticker);
+    gsearchInput.value = '';
+    el.classList.remove('show');
+  });
+}
+const gsearchInput = document.getElementById('gsearch');
+gsearchInput.addEventListener('input', ()=>{
+  const q = gsearchInput.value.trim().toLowerCase();
+  const el = document.getElementById('gsearch-results');
+  if(!q){ el.classList.remove('show'); return; }
+  const matches = DATA
+    .filter(d => d.ticker.toLowerCase().includes(q) || (d.name||'').toLowerCase().includes(q))
+    .sort((a,b) => (a.ticker.toLowerCase().startsWith(q)?0:1) - (b.ticker.toLowerCase().startsWith(q)?0:1));
+  renderGSearchResults(matches);
+});
+gsearchInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    const q = gsearchInput.value.trim().toUpperCase();
+    if(!q) return;
+    const hit = DATA.find(d=>d.ticker===q) || DATA.find(d=>d.ticker.startsWith(q));
+    if(hit){ openTrendLab(hit.ticker); gsearchInput.value=''; document.getElementById('gsearch-results').classList.remove('show'); }
+  } else if(e.key==='Escape'){
+    gsearchInput.blur();
+    document.getElementById('gsearch-results').classList.remove('show');
+  }
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.gsearch-wrap')) document.getElementById('gsearch-results').classList.remove('show');
 });
 
 // ---- Quest: το προσωπικό checklist 5 ερωτήσεων ποιότητας ----
@@ -937,7 +1094,7 @@ fetch('positions.json?_=' + Date.now())
   .then(r=> r.ok ? r.json() : null)
   .then(json=>{
     window.T212 = json;
-    if(json && currentTab==='positions') refresh();
+    if(json && (currentTab==='positions' || currentTab==='today')) refresh();
   })
   .catch(()=>{ /* χωρίς sync — fallback στα χειροκίνητα POSITIONS */ });
 
@@ -961,7 +1118,7 @@ fetch('data.json?_=' + Date.now())
     document.getElementById('updated-date').textContent = 'σφάλμα φόρτωσης';
   });
 
-applyTab('long', DATA);
+applyTab('today', DATA);
 </script>
 </body>
 </html>

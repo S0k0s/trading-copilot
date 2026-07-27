@@ -352,6 +352,7 @@ window.TrendLab = (function () {
 /* Άνοιγμα του Trend Lab από οπουδήποτε (π.χ. κουμπί στο modal μετοχής) */
 function openTrendLab(ticker) {
   if (typeof closeModal === 'function') closeModal();
-  applyTab('trend', (typeof filteredData === 'function' ? filteredData() : []));
+  if (typeof selectTab === 'function') selectTab('trend');
+  else applyTab('trend', (typeof filteredData === 'function' ? filteredData() : []));
   window.TrendLab.render(ticker);
 }

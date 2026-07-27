@@ -11,6 +11,7 @@ scan.py — Ξανατρέχει το scoring όλων των μετοχών τ�
 κρατάει τα προηγούμενα γνωστά δεδομένα της αντί να ρίξει όλο το script.
 """
 import json
+import os
 import re
 import sys
 import time
@@ -22,7 +23,12 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_JSON = ROOT / "data.json"
 NEWS_JSON = ROOT / "news.json"
 
-# ticker -> εμφανιζόμενο όνομα
+# Καθυστέρηση μεταξύ requests (δευτ.) — SCAN_SLEEP=0.5 για γρηγορότερο τοπικό run
+SCAN_SLEEP = float(os.environ.get("SCAN_SLEEP", "1.2"))
+
+# Στατικό fallback: ticker -> εμφανιζόμενο όνομα.
+# Το πραγματικό universe έρχεται δυναμικά από τη λίστα S&P 500 (fetch_universe) —
+# αυτό εδώ χρησιμοποιείται μόνο αν αποτύχει το fetch της λίστας.
 TICKERS = {
     "NVDA": "NVIDIA", "GOOGL": "Alphabet", "AAPL": "Apple", "MSFT": "Microsoft",
     "AMZN": "Amazon", "AVGO": "Broadcom", "META": "Meta Platforms", "TSLA": "Tesla",
@@ -146,6 +152,58 @@ def fetch_table_map(ticker):
     return out, price
 
 
+_NAME_SUFFIX_RE = re.compile(
+    r"[,]?\s+(Incorporated|Corporation|Company|Holdings?|Inc|Corp|Co|plc|Ltd|N\.V\.|S\.A\.)\.?$",
+    re.IGNORECASE)
+
+
+def _clean_company_name(name):
+    """'NVIDIA Corporation' -> 'NVIDIA', 'Apple Inc.' -> 'Apple' (για καθαρό UI)."""
+    prev = None
+    while prev != name:
+        prev = name
+        name = _NAME_SUFFIX_RE.sub("", name).strip().rstrip("&,").strip()
+    return name or prev
+
+
+def fetch_universe():
+    """Δυναμικό universe: όλες οι μετοχές του S&P 500 από το stockanalysis.com,
+    ταξινομημένες κατά κεφαλαιοποίηση. Επιστρέφει dict ticker->name ή None."""
+    from bs4 import BeautifulSoup
+    url = "https://stockanalysis.com/list/sp-500-stocks/"
+    try:
+        req = Request(url, headers=HEADERS)
+        with _urlopen(req) as resp:
+            soup = BeautifulSoup(resp.read(), "lxml")
+        table = soup.find("table")
+        out = {}
+        for tr in (table.find_all("tr")[1:] if table else []):
+            cells = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
+            if len(cells) >= 3 and cells[1]:
+                out[cells[1]] = _clean_company_name(cells[2])
+        if len(out) < 400:  # κάτι πήγε στραβά — μην εμπιστευτείς μισή λίστα
+            print(f"! Λίστα S&P 500: μόνο {len(out)} σύμβολα — χρήση στατικού fallback.")
+            return None
+        return out
+    except Exception as e:
+        print(f"! Αποτυχία λήψης λίστας S&P 500 ({e}) — χρήση στατικού fallback.")
+        return None
+
+
+def resolve_universe():
+    """Τελικό universe: δυναμική λίστα S&P 500, με τα ονόματα του στατικού
+    TICKERS να προηγούνται (πιο σύντομα/οικεία) όπου υπάρχουν."""
+    fetched = fetch_universe()
+    if not fetched:
+        return dict(TICKERS)
+    merged = dict(fetched)
+    merged.update({k: v for k, v in TICKERS.items() if k in merged})
+    # κράτα και τυχόν δικά μας tickers εκτός S&P 500
+    for k, v in TICKERS.items():
+        merged.setdefault(k, v)
+    return merged
+
+
 def fetch_roe_5y_avg(ticker):
     """Μ.ο. ROE των 5 τελευταίων fiscal years από τη σελίδα financials/ratios.
     Αγνοεί τη στήλη 'Current' (ttm). Επιστρέφει None αν δεν βρεθεί."""
@@ -262,7 +320,7 @@ def scan_ticker(ticker, name, previous):
     }
 
     # ROE μ.ο. 5ετίας (για το quest checklist) — δεύτερο request, ανεκτικό σε αποτυχία
-    time.sleep(0.8)
+    time.sleep(SCAN_SLEEP * 0.6)
     try:
         row["roe_5y_avg"] = fetch_roe_5y_avg(ticker)
     except Exception as e:
@@ -434,12 +492,16 @@ def ticker_news_summary(items, earnings=None, rev_growth=None):
         wsum += w * it["s"]
         wtot += w
     score = round((wsum / wtot) * 100) if wtot > 0 else 0
-    headlines = [{k: it[k] for k in ("t", "d", "s", "src", "u")} for it in items[:12]]
+    headlines = [{k: it[k] for k in ("t", "d", "s", "src", "u")} for it in items[:8]]
     return {"score": score, "n": len(items), "headlines": headlines,
             "earnings_date": earnings, "revenue_growth_yoy": rev_growth}
 
 
-def scan_news(delay=1.0):
+def scan_news(tickers=None, delay=None):
+    if tickers is None:
+        tickers = resolve_universe()
+    if delay is None:
+        delay = SCAN_SLEEP * 0.8
     previous = {}
     if NEWS_JSON.exists():
         try:
@@ -448,11 +510,11 @@ def scan_news(delay=1.0):
             pass
 
     tickers_out = {}
-    for i, ticker in enumerate(TICKERS, 1):
+    for i, ticker in enumerate(tickers, 1):
         try:
             items, earnings, rev_growth = fetch_news(ticker)
             tickers_out[ticker] = ticker_news_summary(items, earnings, rev_growth)
-            print(f"[{i}/{len(TICKERS)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
+            print(f"[{i}/{len(tickers)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
                   f"sentiment {tickers_out[ticker]['score']:+d}, earnings {earnings or '—'}")
         except Exception as e:
             print(f"  ! news {ticker}: {e} — κρατάω παλιά δεδομένα")
@@ -552,6 +614,9 @@ def main():
         sync_positions()
         return
 
+    tickers = resolve_universe()
+    print(f"Universe: {len(tickers)} μετοχές")
+
     previous_by_ticker = {}
     if DATA_JSON.exists():
         try:
@@ -563,8 +628,8 @@ def main():
 
     results = []
     failures = 0
-    for i, (ticker, name) in enumerate(TICKERS.items(), 1):
-        print(f"[{i}/{len(TICKERS)}] {ticker} ({name})")
+    for i, (ticker, name) in enumerate(tickers.items(), 1):
+        print(f"[{i}/{len(tickers)}] {ticker} ({name})")
         prev = previous_by_ticker.get(ticker)
         try:
             row = scan_ticker(ticker, name, prev)
@@ -574,7 +639,7 @@ def main():
             failures += 1
         if row:
             results.append(row)
-        time.sleep(1.2)  # ευγενική καθυστέρηση μεταξύ requests
+        time.sleep(SCAN_SLEEP)  # ευγενική καθυστέρηση μεταξύ requests
 
     if not results:
         print("Καμία μετοχή δεν ανακτήθηκε επιτυχώς — δεν γράφω data.json.", file=sys.stderr)
@@ -589,7 +654,7 @@ def main():
 
     # Ειδήσεις & sentiment για το Trend Lab (ανθεκτικό: αποτυχία εδώ δεν ρίχνει το run)
     try:
-        scan_news()
+        scan_news(tickers)
     except Exception as e:
         print(f"! Το news scan απέτυχε συνολικά ({e}) — το data.json γράφτηκε κανονικά.")
 

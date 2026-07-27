@@ -288,5 +288,5 @@ window.Markets = (function () {
     }
   }
 
-  return { render };
+  return { render, MARKETS, marketStatus };
 })();

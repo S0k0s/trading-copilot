@@ -4,34 +4,56 @@
 
 **Live:** https://s0k0s.github.io/trading-copilot/
 
-## Δομή (V4)
+## Δομή (V5)
 
 ```
-├── index.html            # Markup, CSS και ο βασικός screener (tabs, modal, journal)
+├── index.html            # Markup, CSS και ο βασικός screener (4 ενότητες πλοήγησης,
+│                         #   καθολική αναζήτηση, modal, journal)
+├── manifest.webmanifest  # PWA manifest — "Προσθήκη στην αφετηρία" στο κινητό
 ├── assets/
+│   ├── icon.svg / icon-*.png  # Εικονίδιο εφαρμογής (favicon, apple-touch, PWA)
 │   ├── analysis.js       # Κοινή βιβλιοθήκη: ιστορικά τιμών (stockanalysis API, client-side,
 │   │                     #   cache 6h σε localStorage), δείκτες (SMA/RSI/ATR), pivots,
-│   │                     #   αυτόματο κανάλι στήριξης/αντίστασης, προβολή τάσης, backtests
-│   ├── trendlab.js       # Tab "Τάσεις & Πρόβλεψη": custom canvas candlestick chart με κανάλι
+│   │                     #   αυτόματο κανάλι στήριξης/αντίστασης, προβολή τάσης, backtests,
+│   │                     #   quest checklist, earnings helper
+│   ├── today.js          # «🏠 Σήμερα» — αρχική οθόνη: χαρτοφυλάκιο, mini αγορές,
+│   │                     #   earnings της εβδομάδας, Quest 5/5 highlights
+│   ├── trendlab.js       # «📊 Τάσεις & Πρόβλεψη»: custom canvas candlestick chart με κανάλι
 │   │                     #   S/R, στατιστική προβολή 20 συνεδριάσεων, σύνθετη εκτίμηση τάσης
 │   │                     #   (τεχνική εικόνα + news sentiment) και λίστα ειδήσεων
-│   ├── events.js         # Tab "Event Patterns": μέση ιστορική πορεία ±21 συνεδριάσεις γύρω
+│   ├── events.js         # «🗓️ Event Patterns»: μέση ιστορική πορεία ±21 συνεδριάσεις γύρω
 │   │                     #   από παρουσιάσεις προϊόντων (AAPL/TSLA/NVDA/META/GOOGL/MSFT/AMD),
 │   │                     #   win rates, custom events σε localStorage
-│   ├── strategies.js     # Tab "Στρατηγικές": οδηγός 5 στρατηγικών, mini backtest σε
+│   ├── strategies.js     # «🧭 Στρατηγικές»: οδηγός 5 στρατηγικών, mini backtest σε
 │   │                     #   πραγματικό ιστορικό, υπολογιστής μεγέθους θέσης βάσει ρίσκου
-│   └── markets.js        # Tab "Αγορές & Earnings": ώρες 11 χρηματιστηρίων (DST-aware,
+│   └── markets.js        # «🕒 Αγορές & Earnings»: ώρες 11 χρηματιστηρίων (DST-aware,
 │                         #   live status, 24ωρο timeline) + ημερολόγιο επερχόμενων
 │                         #   earnings του universe (πηγή: earningsDate στο news.json)
 ├── data.json             # Scores/θεμελιώδη ανά μετοχή (γράφεται από scanner/scan.py)
 ├── news.json             # Ειδήσεις + sentiment ανά μετοχή (γράφεται από scanner/scan.py)
 ├── positions.json        # Live θέσεις από Trading212 (γράφεται από το sync — δεν υπάρχει
 │                         #   μέχρι να ρυθμιστεί το T212_API_KEY secret)
-├── scanner/scan.py       # Scraper/scorer + news sentiment + Trading212 sync
+├── scanner/scan.py       # Scraper/scorer + news sentiment + Trading212 sync· universe =
+│                         #   ολόκληρο το S&P 500, τραβηγμένο δυναμικά (fetch_universe)
 └── .github/workflows/
     ├── update.yml        # Cron Δευ–Παρ 21:30 UTC: scan.py → commit data+news(+positions)
     └── positions.yml     # Cron κάθε 2h (07–21 UTC, Δευ–Παρ): μόνο sync θέσεων
 ```
+
+## Πλοήγηση (V5)
+
+4 ενότητες: **🏠 Σήμερα** (dashboard — χαρτοφυλάκιο, mini αγορές, earnings εβδομάδας, Quest
+5/5), **🔎 Σκάνερ** (Top 10, Προτάσεις, Όλες οι μετοχές), **📊 Ανάλυση** (Τάσεις &amp; Πρόβλεψη,
+Event Patterns, Στρατηγικές), **💼 Χαρτοφυλάκιο** (Θέσεις, Αγορές &amp; Earnings, Journal). Στο
+κινητό γίνονται fixed bottom nav bar. Καθολική αναζήτηση (`#gsearch`) πάνω-πάνω βρίσκει
+οποιαδήποτε από τις ~500 μετοχές και ανοίγει κατευθείαν το Trend Lab.
+
+**Universe:** δυναμική λίστα ολόκληρου του S&amp;P 500 (`fetch_universe()` στο scan.py, από
+`stockanalysis.com/list/sp-500-stocks/`, ~500 μετοχές όλων των κλάδων) — ενημερώνεται αυτόματα
+σε κάθε scan, δεν χρειάζεται πλέον χειροκίνητη λίστα tickers.
+
+**Cache-busting:** τα `assets/*.js` φορτώνονται με `?v=N` query param· ανέβασε το `N` όταν
+αλλάζεις κάποιο asset ώστε οι browsers να μην κρατήσουν παλιά έκδοση σε cache.
 
 ## Αυτόματο sync θέσεων από Trading212
 
