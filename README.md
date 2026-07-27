@@ -49,6 +49,14 @@
 Το API key μένει μόνο στα GitHub Secrets — ποτέ μέσα στον κώδικα ή στο site. Χωρίς secret,
 τα workflows απλά παραλείπουν το sync. Τοπικά: `T212_API_KEY=... python3 scanner/scan.py --positions-only`.
 
+## 🎯 Quest — 5 ερωτήσεις ποιότητας
+
+Προσωπικό φίλτρο πρώτης διαλογής, ορατό στο modal κάθε μετοχής, ως ταξινομήσιμη στήλη στο
+«Όλες οι μετοχές» και ως badge στα Top 10: (1) έσοδα ≥10%/χρόνο (YoY, από overview
+`__data.json`), (2) P/E &lt; 25, (3) PEG &lt; 2, (4) μ.ο. ROE 5 τελευταίων fiscal years &gt; 5%
+(από `financials/ratios/`), (5) quick ratio &gt; 1.5 (από statistics). Μετοχή που περνάει και
+τα 5 σημαίνεται «αξίζει βαθύτερο ψάξιμο» — δεν είναι σήμα αγοράς.
+
 ## Πηγές δεδομένων
 
 - **Θεμελιώδη/στατιστικά:** scrape του stockanalysis.com/stocks/{ticker}/statistics/ (scanner).

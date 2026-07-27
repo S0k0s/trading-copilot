@@ -88,6 +88,7 @@ LABELS = {
     "revenue_growth_forecast_3y": ["Revenue Growth Forecast (3Y)"],
     "altman_z": ["Altman Z-Score"],
     "piotroski_f": ["Piotroski F-Score"],
+    "quick_ratio": ["Quick Ratio"],
     "market_cap": ["Market Cap"],
     "analyst_consensus": ["Analyst Consensus"],
     "shares_outstanding": ["Shares Outstanding", "Current Share Class"],
@@ -143,6 +144,38 @@ def fetch_table_map(ticker):
     if m:
         price = to_number(m.group(1))
     return out, price
+
+
+def fetch_roe_5y_avg(ticker):
+    """Μ.ο. ROE των 5 τελευταίων fiscal years από τη σελίδα financials/ratios.
+    Αγνοεί τη στήλη 'Current' (ttm). Επιστρέφει None αν δεν βρεθεί."""
+    from bs4 import BeautifulSoup
+    slug = ticker.lower().replace(".", "-")
+    url = f"https://stockanalysis.com/stocks/{slug}/financials/ratios/"
+    req = Request(url, headers=HEADERS)
+    with _urlopen(req) as resp:
+        soup = BeautifulSoup(resp.read(), "lxml")
+    # Η σελίδα έχει πολλούς πίνακες (ένας ανά κατηγορία δεικτών) — ψάξε όλους.
+    for table in soup.find_all("table"):
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+        headers = [c.get_text(strip=True) for c in rows[0].find_all(["td", "th"])]
+        for tr in rows[1:]:
+            cells = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
+            if not cells or "Return on Equity" not in cells[0]:
+                continue
+            vals = []
+            for i, cell in enumerate(cells[1:], start=1):
+                if i < len(headers) and not headers[i].startswith("FY"):
+                    continue  # στήλη 'Current' ή άσχετη
+                v = to_number(cell)
+                if v is not None:
+                    vals.append(v)
+                if len(vals) == 5:
+                    break
+            return round(sum(vals) / len(vals), 1) if vals else None
+    return None
 
 
 def score_from(row):
@@ -224,8 +257,17 @@ def scan_ticker(ticker, name, previous):
         "revenue_growth_forecast_3y": to_number(tbl.get("Revenue Growth Forecast (3Y)")),
         "altman_z": to_number(tbl.get("Altman Z-Score")),
         "piotroski_f": to_number(tbl.get("Piotroski F-Score")),
+        "quick_ratio": to_number(tbl.get("Quick Ratio")),
         "market_cap": tbl.get("Market Cap"),
     }
+
+    # ROE μ.ο. 5ετίας (για το quest checklist) — δεύτερο request, ανεκτικό σε αποτυχία
+    time.sleep(0.8)
+    try:
+        row["roe_5y_avg"] = fetch_roe_5y_avg(ticker)
+    except Exception as e:
+        print(f"  ! {ticker}: αποτυχία ROE 5Y ({e})")
+        row["roe_5y_avg"] = previous.get("roe_5y_avg") if previous else None
 
     # Fallback τιμής: Market Cap / Shares Outstanding, αν δεν βρέθηκε απευθείας τιμή.
     if row["price"] is None:
@@ -347,6 +389,7 @@ def fetch_news(ticker):
         raw = json.loads(resp.read())
     items = []
     earnings = None
+    rev_growth = None
     for node in raw.get("nodes", []):
         if not node or node.get("type") != "data":
             continue
@@ -360,6 +403,11 @@ def fetch_news(ticker):
                 idx = v["earningsDate"]
                 val = data[idx] if isinstance(idx, int) and 0 <= idx < len(data) else None
                 earnings = _parse_us_date(val)
+                if rev_growth is None and "revenueGrowth" in v:
+                    ri = v["revenueGrowth"]
+                    rv = data[ri] if isinstance(ri, int) and 0 <= ri < len(data) else None
+                    if isinstance(rv, (int, float)):
+                        rev_growth = round(float(rv), 2)
     out = []
     for it in items:
         title = it["title"].strip()
@@ -373,10 +421,10 @@ def fetch_news(ticker):
             "src": it.get("source"),
             "u": it.get("url"),
         })
-    return out, earnings
+    return out, earnings, rev_growth
 
 
-def ticker_news_summary(items, earnings=None):
+def ticker_news_summary(items, earnings=None, rev_growth=None):
     """Συνολικό sentiment -100..+100 με βάρος πρόσφατο (half-life 3 μέρες)."""
     now = time.time()
     wsum, wtot = 0.0, 0.0
@@ -388,7 +436,7 @@ def ticker_news_summary(items, earnings=None):
     score = round((wsum / wtot) * 100) if wtot > 0 else 0
     headlines = [{k: it[k] for k in ("t", "d", "s", "src", "u")} for it in items[:12]]
     return {"score": score, "n": len(items), "headlines": headlines,
-            "earnings_date": earnings}
+            "earnings_date": earnings, "revenue_growth_yoy": rev_growth}
 
 
 def scan_news(delay=1.0):
@@ -402,8 +450,8 @@ def scan_news(delay=1.0):
     tickers_out = {}
     for i, ticker in enumerate(TICKERS, 1):
         try:
-            items, earnings = fetch_news(ticker)
-            tickers_out[ticker] = ticker_news_summary(items, earnings)
+            items, earnings, rev_growth = fetch_news(ticker)
+            tickers_out[ticker] = ticker_news_summary(items, earnings, rev_growth)
             print(f"[{i}/{len(TICKERS)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
                   f"sentiment {tickers_out[ticker]['score']:+d}, earnings {earnings or '—'}")
         except Exception as e:

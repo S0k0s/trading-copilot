@@ -417,6 +417,34 @@ window.Analysis = (function () {
     return ticks;
   }
 
+  /* ------------- Quest: 5 ερωτήσεις ποιότητας ---------------------------- */
+
+  /**
+   * Το προσωπικό checklist 5 ερωτήσεων. Κάθε check: pass true/false, ή null
+   * όταν λείπει το δεδομένο. fullPass μόνο όταν και οι 5 είναι σίγουρα true.
+   * newsInfo = window.NEWS.tickers[ticker] (για το revenue growth YoY).
+   */
+  function questChecklist(stock, newsInfo) {
+    const rev = newsInfo ? newsInfo.revenue_growth_yoy : null;
+    const pe = stock.pe_ratio, peg = stock.peg_ratio;
+    const roe5 = stock.roe_5y_avg, qr = stock.quick_ratio;
+    const checks = [
+      { q: 'Μεγαλώνουν τα έσοδα ≥10% το χρόνο;', rule: '≥ 10%', fmt: '%',
+        v: rev, pass: rev == null ? null : rev >= 10 },
+      { q: 'Είναι το P/E κάτω από 25;', rule: '< 25', fmt: '',
+        v: pe, pass: pe == null ? null : pe < 25 },
+      { q: 'Είναι το PEG κάτω από 2;', rule: '0 < PEG < 2', fmt: '',
+        v: peg, pass: peg == null ? null : (peg > 0 && peg < 2) },
+      { q: 'Μ.ο. ROE 5ετίας πάνω από 5%;', rule: '> 5%', fmt: '%',
+        v: roe5, pass: roe5 == null ? null : roe5 > 5 },
+      { q: 'Quick ratio πάνω από 1.5;', rule: '> 1.5', fmt: '',
+        v: qr, pass: qr == null ? null : qr > 1.5 },
+    ];
+    const passed = checks.filter(c => c.pass === true).length;
+    const unknown = checks.filter(c => c.pass === null).length;
+    return { checks, passed, unknown, fullPass: passed === 5 };
+  }
+
   /* ------------- Earnings helper ----------------------------------------- */
 
   /**
@@ -438,6 +466,6 @@ window.Analysis = (function () {
     fetchHistory, sma, rsi, atr, linreg,
     findPivots, detectChannel, projection, predictTrend,
     btBuyHold, btMaTrend, btPullback,
-    setupCanvas, niceTicks, clamp, earningsInfo,
+    setupCanvas, niceTicks, clamp, earningsInfo, questChecklist,
   };
 })();
