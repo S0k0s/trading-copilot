@@ -39,6 +39,14 @@
   .search{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
     background:var(--panel);color:var(--text);font-size:14px;margin-bottom:16px;}
   .search::placeholder{color:var(--muted);}
+  .filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;font-size:13px;}
+  .filter-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border);padding:8px 13px;border-radius:8px;user-select:none;}
+  .filter-toggle input{accent-color:var(--accent);width:14px;height:14px;}
+  .filter-toggle:has(input:checked){color:var(--text);border-color:var(--accent);background:rgba(79,140,255,.08);}
+  .filter-select{background:var(--panel);border:1px solid var(--border);color:var(--text);
+    padding:8px 12px;border-radius:8px;font-size:13px;}
+  .filter-count{color:var(--muted);margin-left:auto;font-size:12px;}
 
   /* --- V5: 4-section nav, global search, mobile bottom bar --- */
   .gsearch-wrap{position:relative;margin-bottom:18px;}
@@ -300,6 +308,16 @@
   .tdy-quest-card:hover{border-color:var(--green);}
   .tdy-quest-card b{display:block;font-size:15px;}
   .tdy-quest-card span{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+  .picks-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;}
+  @media(max-width:640px){.picks-cols{grid-template-columns:1fr;}}
+  .picks-subhd{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px;}
+  .pick-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;margin-bottom:7px;cursor:pointer;}
+  .pick-card:hover{border-color:var(--accent);}
+  .pick-hd{display:flex;align-items:baseline;gap:8px;}
+  .pick-hd b{font-size:14px;}
+  .pick-name{color:var(--muted);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pick-reason{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
 
   /* Earnings ημερολόγιο + badges */
   .earn-badge{display:inline-block;background:rgba(229,98,107,.15);color:var(--red);
@@ -400,6 +418,12 @@
   <div class="subtabs" id="subtabs" style="display:none;"></div>
 
   <input class="search" id="search" placeholder="Αναζήτηση ticker ή εταιρείας... (π.χ. AAPL, Nvidia)" style="display:none;">
+  <div class="filter-bar" id="filter-bar" style="display:none;">
+    <label class="filter-toggle"><input type="checkbox" id="filter-quest"> 🎯 Μόνο Quest 5/5</label>
+    <label class="filter-toggle"><input type="checkbox" id="filter-earnings"> 📅 Earnings αυτή την εβδομάδα</label>
+    <select id="filter-sector" class="filter-select"><option value="">Όλοι οι κλάδοι</option></select>
+    <span id="filter-count" class="filter-count"></span>
+  </div>
 
   <div id="today" style="display:none;"></div>
   <div id="positions" class="positions" style="display:none;"></div>
@@ -465,12 +489,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=5"></script>
-<script src="assets/trendlab.js?v=5"></script>
-<script src="assets/markets.js?v=5"></script>
-<script src="assets/events.js?v=5"></script>
-<script src="assets/strategies.js?v=5"></script>
-<script src="assets/today.js?v=5"></script>
+<script src="assets/analysis.js?v=6"></script>
+<script src="assets/trendlab.js?v=6"></script>
+<script src="assets/markets.js?v=6"></script>
+<script src="assets/events.js?v=6"></script>
+<script src="assets/strategies.js?v=6"></script>
+<script src="assets/today.js?v=6"></script>
 <script>
 let DATA = [];
 
@@ -784,6 +808,30 @@ function fmt(v,suffix){
   return v + (suffix||'');
 }
 
+// ---- Αυτόματος λόγος για το "Κορυφαίες επιλογές σήμερα" (tab Σήμερα) ----
+function longTermReason(d){
+  const parts = [];
+  if(d.peg_ratio!=null && d.peg_ratio>0 && d.peg_ratio<1.5) parts.push(`PEG ${d.peg_ratio.toFixed(2)}`);
+  if(d.roe!=null && d.roe>20) parts.push(`ROE ${d.roe.toFixed(0)}%`);
+  if(d.debt_equity!=null && d.debt_equity<0.5) parts.push(`χαμηλό χρέος`);
+  if(d.piotroski_f!=null && d.piotroski_f>=7) parts.push(`Piotroski ${d.piotroski_f}/9`);
+  const base = parts.length ? parts.slice(0,2).join(', ') : `Long-Term Score ${fmt(d.long_term_score)}`;
+  const risk = (d.week52_change!=null && d.week52_change>150)
+    ? ` · ⚠️ +${d.week52_change.toFixed(0)}% σε 52 εβδ., ρίσκο διόρθωσης` : '';
+  return base + risk;
+}
+function swingReason(d){
+  const parts = [];
+  if(d.price!=null && d.ma50!=null && d.ma200!=null && d.price>d.ma50 && d.ma50>d.ma200) parts.push('τιμή&gt;MA50&gt;MA200');
+  if(d.rsi!=null && d.rsi>=45 && d.rsi<=65) parts.push(`RSI ${d.rsi.toFixed(0)} υγιές`);
+  if(d.beta!=null) parts.push(`beta ${d.beta.toFixed(1)}`);
+  const base = parts.length ? parts.slice(0,2).join(', ') : `Swing Score ${fmt(d.swing_score)}`;
+  const risk = (d.rsi!=null && d.rsi>72) ? ` · ⚠️ RSI ${d.rsi.toFixed(0)} κοντά σε υπεραγορασμένο` : '';
+  return base + risk;
+}
+window.longTermReason = longTermReason;
+window.swingReason = swingReason;
+
 let currentTab = 'today';
 let currentGroup = 'today';
 let sortKey = 'long_term_score', sortDir = -1;
@@ -888,6 +936,7 @@ function applyTab(tab, list){
   document.getElementById('table-wrap').style.display = 'none';
   const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','markets'];
   document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
+  document.getElementById('filter-bar').style.display = noSearch.includes(tab) ? 'none' : 'flex';
   if(tab==='today'){
     document.getElementById('today').style.display = 'block';
     window.Today && Today.render();
@@ -925,18 +974,49 @@ function applyTab(tab, list){
   else renderTable(list);
 }
 
+function earningsWithinDays(ticker, maxDays){
+  const news = window.NEWS && window.NEWS.tickers;
+  const iso = news && news[ticker] && news[ticker].earnings_date;
+  if(!iso) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Math.round((new Date(iso+'T00:00:00') - today) / 86400000);
+  return days>=0 && days<=maxDays;
+}
+
 function filteredData(){
   const q = document.getElementById('search').value.trim().toLowerCase();
-  if(!q) return DATA;
-  return DATA.filter(d => d.ticker.toLowerCase().includes(q) || (d.name||'').toLowerCase().includes(q));
+  let list = DATA;
+  if(q) list = list.filter(d => d.ticker.toLowerCase().includes(q) || (d.name||'').toLowerCase().includes(q));
+  const fq = document.getElementById('filter-quest');
+  const fe = document.getElementById('filter-earnings');
+  const fs = document.getElementById('filter-sector');
+  if(fq && fq.checked) list = list.filter(d => d.quest_pass === 5);
+  if(fe && fe.checked) list = list.filter(d => earningsWithinDays(d.ticker, 7));
+  if(fs && fs.value) list = list.filter(d => d.sector === fs.value);
+  const fc = document.getElementById('filter-count');
+  if(fc){
+    const active = q || (fq&&fq.checked) || (fe&&fe.checked) || (fs&&fs.value);
+    fc.textContent = active ? `${list.length} από ${DATA.length} μετοχές` : '';
+  }
+  return list;
+}
+
+function populateSectorFilter(){
+  const sel = document.getElementById('filter-sector');
+  if(!sel || sel.dataset.filled) return;
+  const sectors = [...new Set(DATA.map(d=>d.sector).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(!sectors.length) return;
+  sel.innerHTML = '<option value="">Όλοι οι κλάδοι</option>' +
+    sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
+  sel.dataset.filled = '1';
 }
 
 function refresh(){ applyTab(currentTab, filteredData()); }
 
-document.getElementById('search').addEventListener('input', ()=>{
-  if(currentTab==='all') refresh();
-  else applyTab(currentTab, filteredData());
-});
+document.getElementById('search').addEventListener('input', refresh);
+document.getElementById('filter-quest').addEventListener('change', refresh);
+document.getElementById('filter-earnings').addEventListener('change', refresh);
+document.getElementById('filter-sector').addEventListener('change', refresh);
 document.querySelectorAll('thead th').forEach(th=>th.onclick=()=>{
   const k = th.dataset.k;
   if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=-1;}
@@ -1025,7 +1105,7 @@ function openModal(ticker){
   m.innerHTML = `
     <span class="close" onclick="closeModal()">✕</span>
     <h2>${d.ticker}</h2>
-    <div class="company">${d.name||''} · ${d.market_cap||''} market cap · $${fmt(d.price)}</div>
+    <div class="company">${d.name||''} · ${d.market_cap||''} market cap · $${fmt(d.price)}${d.sector?` · ${d.sector}${d.industry?' ('+d.industry+')':''}`:''}</div>
     <button class="tl-open-btn" onclick="openTrendLab('${d.ticker}')">📊 Ανάλυση τάσης &amp; πρόβλεψη</button>
     ${questBox(d)}
     <div class="score-grid">
@@ -1104,6 +1184,7 @@ fetch('data.json?_=' + Date.now())
     DATA = json.stocks || [];
     window.DATA = DATA;
     computeQuestPass();
+    populateSectorFilter();
     document.getElementById('updated-date').textContent = formatUpdated(json.last_updated);
     document.getElementById('universe-count').textContent = DATA.length + ' μετοχές';
     applyTab(currentTab, filteredData());

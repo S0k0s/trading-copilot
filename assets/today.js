@@ -88,6 +88,42 @@ window.Today = (function () {
     </div>`;
   }
 
+  /* ---------------- Κορυφαίες επιλογές σήμερα (Top 5 Long-Term / Swing) --- */
+
+  function pickCard(d, reasonFn) {
+    const q = d.quest_pass === 5 ? ' <span class="quest-badge" style="margin-left:4px;">🎯5/5</span>' : '';
+    return `<div class="pick-card" onclick="openTrendLab('${d.ticker}')">
+      <div class="pick-hd"><b>${d.ticker}</b>${q}<span class="pick-name">${d.name || ''}</span></div>
+      <div class="pick-reason">${reasonFn(d)}</div>
+    </div>`;
+  }
+
+  function dailyPicksSection() {
+    const data = window.DATA || [];
+    if (!data.length) {
+      return `<div class="tl-panel"><div class="lbl">🏆 Κορυφαίες επιλογές σήμερα</div>
+        <div class="tl-factor-txt">Φόρτωση…</div></div>`;
+    }
+    const lt = data.filter(d => d.long_term_score != null).sort((a, b) => b.long_term_score - a.long_term_score).slice(0, 5);
+    const sw = data.filter(d => d.swing_score != null).sort((a, b) => b.swing_score - a.swing_score).slice(0, 5);
+    return `<div class="tl-panel">
+      <div class="lbl">🏆 Κορυφαίες επιλογές σήμερα — αυτόματα, βάσει scores (όχι σύσταση αγοράς)</div>
+      <div class="picks-cols">
+        <div>
+          <div class="picks-subhd">🏛️ Long-Term (top 5)</div>
+          ${lt.map(d => pickCard(d, window.longTermReason)).join('')}
+        </div>
+        <div>
+          <div class="picks-subhd">⚡ Swing (top 5)</div>
+          ${sw.map(d => pickCard(d, window.swingReason)).join('')}
+        </div>
+      </div>
+      <div class="tl-factor-txt" style="margin-top:8px;">Αυτόματη κατάταξη βάσει δημόσιων δεδομένων και του
+      καθορισμένου τύπου (δες Μεθοδολογία στο τέλος) — ανανεώνεται με κάθε scan. <b>Δεν</b> λαμβάνει υπόψη
+      τη δική σου ανοχή ρίσκου ή το ήδη υπάρχον χαρτοφυλάκιό σου.</div>
+    </div>`;
+  }
+
   /* ---------------- Earnings αυτή την εβδομάδα ---------------------------- */
 
   function earningsSection() {
@@ -165,6 +201,7 @@ window.Today = (function () {
         ${portfolioSection()}
         ${marketsSection()}
       </div>
+      ${dailyPicksSection()}
       ${earningsSection()}
       ${questSection()}
     `;

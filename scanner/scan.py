@@ -204,6 +204,27 @@ def resolve_universe():
     return merged
 
 
+def fetch_sector_industry(ticker):
+    """Sector/Industry από τη σελίδα company/ (δεν υπάρχουν στο statistics/)."""
+    from bs4 import BeautifulSoup
+    slug = ticker.lower().replace(".", "-")
+    url = f"https://stockanalysis.com/stocks/{slug}/company/"
+    req = Request(url, headers=HEADERS)
+    with _urlopen(req) as resp:
+        soup = BeautifulSoup(resp.read(), "lxml")
+    sector, industry = None, None
+    for tr in soup.find_all("tr"):
+        cells = tr.find_all(["td", "th"])
+        if len(cells) != 2:
+            continue
+        label = cells[0].get_text(strip=True)
+        if label == "Sector":
+            sector = cells[1].get_text(strip=True)
+        elif label == "Industry":
+            industry = cells[1].get_text(strip=True)
+    return sector, industry
+
+
 def fetch_roe_5y_avg(ticker):
     """Μ.ο. ROE των 5 τελευταίων fiscal years από τη σελίδα financials/ratios.
     Αγνοεί τη στήλη 'Current' (ttm). Επιστρέφει None αν δεν βρεθεί."""
@@ -326,6 +347,15 @@ def scan_ticker(ticker, name, previous):
     except Exception as e:
         print(f"  ! {ticker}: αποτυχία ROE 5Y ({e})")
         row["roe_5y_avg"] = previous.get("roe_5y_avg") if previous else None
+
+    # Sector/Industry (για φίλτρα στο "Όλες οι μετοχές") — τρίτο request, ανεκτικό σε αποτυχία
+    time.sleep(SCAN_SLEEP * 0.6)
+    try:
+        row["sector"], row["industry"] = fetch_sector_industry(ticker)
+    except Exception as e:
+        print(f"  ! {ticker}: αποτυχία sector/industry ({e})")
+        row["sector"] = previous.get("sector") if previous else None
+        row["industry"] = previous.get("industry") if previous else None
 
     # Fallback τιμής: Market Cap / Shares Outstanding, αν δεν βρέθηκε απευθείας τιμή.
     if row["price"] is None:
