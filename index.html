@@ -430,6 +430,7 @@
     <label class="filter-toggle"><input type="checkbox" id="filter-quest"> 🎯 Μόνο Quest 5/5</label>
     <label class="filter-toggle"><input type="checkbox" id="filter-earnings"> 📅 Earnings αυτή την εβδομάδα</label>
     <select id="filter-sector" class="filter-select"><option value="">Όλοι οι κλάδοι</option></select>
+    <select id="filter-market" class="filter-select"><option value="">Όλες οι αγορές</option></select>
     <span id="filter-count" class="filter-count"></span>
   </div>
 
@@ -497,12 +498,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=8"></script>
-<script src="assets/trendlab.js?v=8"></script>
-<script src="assets/markets.js?v=8"></script>
-<script src="assets/events.js?v=8"></script>
-<script src="assets/strategies.js?v=8"></script>
-<script src="assets/today.js?v=8"></script>
+<script src="assets/analysis.js?v=9"></script>
+<script src="assets/trendlab.js?v=9"></script>
+<script src="assets/markets.js?v=9"></script>
+<script src="assets/events.js?v=9"></script>
+<script src="assets/strategies.js?v=9"></script>
+<script src="assets/today.js?v=9"></script>
 <script>
 let DATA = [];
 
@@ -517,8 +518,21 @@ const POSITIONS = [
 ];
 window.POSITIONS = POSITIONS;
 
+// Επίθημα δικού μας ticker (π.χ. ".L") -> πρόθεμα exchange για TradingView (π.χ. "LSE:").
+// Best-effort mapping — αν δεν ταιριάξει ακριβώς, το widget απλά δεν βρίσκει το σύμβολο.
+const TV_EXCHANGE_PREFIX = {
+  '.AT': 'ATHEX:', '.PA': 'EURONEXT:', '.T': 'TSE:', '.AX': 'ASX:',
+  '.L': 'LSE:', '.DE': 'XETR:', '.HK': 'HKEX:', '.TO': 'TSX:',
+};
 function tvSymbol(ticker){
-  // Bare ticker — το TradingView widget κάνει auto-resolve στη βασική/πιο γνωστή λίστα για μεγάλες US εταιρείες.
+  for(const suf in TV_EXCHANGE_PREFIX){
+    if(ticker.endsWith(suf)){
+      let raw = ticker.slice(0, -suf.length);
+      if(suf === '.HK') raw = raw.replace(/^0+/, '') || '0'; // TradingView θέλει HK κωδικούς χωρίς αρχικά μηδενικά
+      return TV_EXCHANGE_PREFIX[suf] + raw;
+    }
+  }
+  // ΗΠΑ: bare ticker — το TradingView widget κάνει auto-resolve στη βασική/πιο γνωστή λίστα.
   return ticker.replace('.', '/');
 }
 
@@ -901,7 +915,7 @@ function renderCards(list, scoreKey){
   cards.innerHTML = top.map((d,i)=>`
     <div class="card" data-ticker="${d.ticker}">
       <div class="rank">#${i+1}</div>
-      <div class="tk">${d.ticker}</div>
+      <div class="tk">${marketFlag(d.market)} ${d.ticker}</div>
       <div class="nm">${d.name||''}</div>
       <span class="score-pill" style="background:${scoreColor(d[scoreKey])}22;color:${scoreColor(d[scoreKey])}">
         ${scoreKey==='long_term_score'?'LT':'SW'} ${fmt(d[scoreKey])}
@@ -923,7 +937,7 @@ function renderTable(list){
   });
   document.getElementById('tbody').innerHTML = sorted.map(d=>`
     <tr data-ticker="${d.ticker}">
-      <td class="tk-cell">${d.ticker}<div class="nm-cell">${d.name||''}</div></td>
+      <td class="tk-cell">${marketFlag(d.market)} ${d.ticker}<div class="nm-cell">${d.name||''}</div></td>
       <td class="${scoreClass(d.long_term_score)}">${fmt(d.long_term_score)}</td>
       <td class="${scoreClass(d.swing_score)}">${fmt(d.swing_score)}</td>
       <td>$${fmt(d.price)}</td>
@@ -993,6 +1007,17 @@ function earningsWithinDays(ticker, maxDays){
   return days>=0 && days<=maxDays;
 }
 
+// Αγορές του universe (ίδιο mapping με assets/markets.js MARKET_INFO)
+const MARKET_INFO = {
+  us: { flag: '🇺🇸', label: 'ΗΠΑ' }, gr: { flag: '🇬🇷', label: 'Ελλάδα' },
+  uk: { flag: '🇬🇧', label: 'Ην. Βασίλειο' }, de: { flag: '🇩🇪', label: 'Γερμανία' },
+  fr: { flag: '🇫🇷', label: 'Γαλλία' }, jp: { flag: '🇯🇵', label: 'Ιαπωνία' },
+  hk: { flag: '🇭🇰', label: 'Hong Kong' }, ca: { flag: '🇨🇦', label: 'Καναδάς' },
+  au: { flag: '🇦🇺', label: 'Αυστραλία' },
+};
+const MARKET_ORDER = ['us','gr','uk','de','fr','jp','hk','ca','au'];
+function marketFlag(m){ return (MARKET_INFO[m] && MARKET_INFO[m].flag) || ''; }
+
 function filteredData(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   let list = DATA;
@@ -1000,12 +1025,14 @@ function filteredData(){
   const fq = document.getElementById('filter-quest');
   const fe = document.getElementById('filter-earnings');
   const fs = document.getElementById('filter-sector');
+  const fm = document.getElementById('filter-market');
   if(fq && fq.checked) list = list.filter(d => d.quest_pass === 5);
   if(fe && fe.checked) list = list.filter(d => earningsWithinDays(d.ticker, 7));
   if(fs && fs.value) list = list.filter(d => d.sector === fs.value);
+  if(fm && fm.value) list = list.filter(d => d.market === fm.value);
   const fc = document.getElementById('filter-count');
   if(fc){
-    const active = q || (fq&&fq.checked) || (fe&&fe.checked) || (fs&&fs.value);
+    const active = q || (fq&&fq.checked) || (fe&&fe.checked) || (fs&&fs.value) || (fm&&fm.value);
     fc.textContent = active ? `${list.length} από ${DATA.length} μετοχές` : '';
   }
   return list;
@@ -1013,12 +1040,23 @@ function filteredData(){
 
 function populateSectorFilter(){
   const sel = document.getElementById('filter-sector');
-  if(!sel || sel.dataset.filled) return;
-  const sectors = [...new Set(DATA.map(d=>d.sector).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  if(!sectors.length) return;
-  sel.innerHTML = '<option value="">Όλοι οι κλάδοι</option>' +
-    sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
-  sel.dataset.filled = '1';
+  if(sel && !sel.dataset.filled){
+    const sectors = [...new Set(DATA.map(d=>d.sector).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    if(sectors.length){
+      sel.innerHTML = '<option value="">Όλοι οι κλάδοι</option>' +
+        sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
+      sel.dataset.filled = '1';
+    }
+  }
+  const msel = document.getElementById('filter-market');
+  if(msel && !msel.dataset.filled){
+    const present = MARKET_ORDER.filter(m => DATA.some(d=>d.market===m));
+    if(present.length){
+      msel.innerHTML = '<option value="">Όλες οι αγορές</option>' +
+        present.map(m=>`<option value="${m}">${MARKET_INFO[m].flag} ${MARKET_INFO[m].label}</option>`).join('');
+      msel.dataset.filled = '1';
+    }
+  }
 }
 
 function refresh(){ applyTab(currentTab, filteredData()); }
@@ -1026,6 +1064,7 @@ function refresh(){ applyTab(currentTab, filteredData()); }
 document.getElementById('search').addEventListener('input', refresh);
 document.getElementById('filter-quest').addEventListener('change', refresh);
 document.getElementById('filter-earnings').addEventListener('change', refresh);
+document.getElementById('filter-market').addEventListener('change', refresh);
 document.getElementById('filter-sector').addEventListener('change', refresh);
 document.querySelectorAll('thead th').forEach(th=>th.onclick=()=>{
   const k = th.dataset.k;
@@ -1043,7 +1082,7 @@ function renderGSearchResults(items){
   }
   el.innerHTML = items.slice(0,8).map(d=>`
     <div class="gsearch-item" data-ticker="${d.ticker}">
-      <span class="tk">${d.ticker}</span><span class="nm">${d.name||''}</span>
+      <span class="tk">${marketFlag(d.market)} ${d.ticker}</span><span class="nm">${d.name||''}</span>
       ${d.quest_pass===5?'<span class="gq">🎯 5/5</span>':''}
     </div>`).join('');
   el.classList.add('show');
@@ -1114,8 +1153,8 @@ function openModal(ticker){
   const m = document.getElementById('modal');
   m.innerHTML = `
     <span class="close" onclick="closeModal()">✕</span>
-    <h2>${d.ticker}</h2>
-    <div class="company">${d.name||''} · ${d.market_cap||''} market cap · $${fmt(d.price)}${d.sector?` · ${d.sector}${d.industry?' ('+d.industry+')':''}`:''}</div>
+    <h2>${marketFlag(d.market)} ${d.ticker}</h2>
+    <div class="company">${d.name||''}${d.market&&MARKET_INFO[d.market]?' · '+MARKET_INFO[d.market].label:''} · ${d.market_cap||''} market cap · $${fmt(d.price)}${d.sector?` · ${d.sector}${d.industry?' ('+d.industry+')':''}`:''}</div>
     <button class="tl-open-btn" onclick="openTrendLab('${d.ticker}')">📊 Ανάλυση τάσης &amp; πρόβλεψη</button>
     ${questBox(d)}
     <div class="score-grid">

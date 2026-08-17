@@ -139,13 +139,25 @@ window.Markets = (function () {
 
   /* ---------------- Κατατεταγμένες προτάσεις (Long-Term / Swing) --------- */
 
-  function rankedList(title, icon, scoreKey, n) {
+  // Αγορές του universe (scan.py MARKET_META) -> εμφάνιση. Σειρά προτίμησης στα chips.
+  const MARKET_INFO = {
+    us: { flag: '🇺🇸', label: 'ΗΠΑ' },
+    gr: { flag: '🇬🇷', label: 'Ελλάδα' },
+    uk: { flag: '🇬🇧', label: 'Ην. Βασίλειο' },
+    de: { flag: '🇩🇪', label: 'Γερμανία' },
+    fr: { flag: '🇫🇷', label: 'Γαλλία' },
+    jp: { flag: '🇯🇵', label: 'Ιαπωνία' },
+    hk: { flag: '🇭🇰', label: 'Hong Kong' },
+    ca: { flag: '🇨🇦', label: 'Καναδάς' },
+    au: { flag: '🇦🇺', label: 'Αυστραλία' },
+  };
+  const MARKET_ORDER = ['us', 'gr', 'uk', 'de', 'fr', 'jp', 'hk', 'ca', 'au'];
+  let rankingsMarket = 'us';
+
+  function rankedList(title, icon, scoreKey, n, market) {
     const data = window.DATA || [];
-    if (!data.length) {
-      return `<div class="tl-panel"><div class="lbl">${icon} ${title}</div>
-        <div class="tl-factor-txt">Φόρτωση…</div></div>`;
-    }
-    const pool = data.filter(d => d[scoreKey] != null);
+    let pool = data.filter(d => d[scoreKey] != null);
+    if (market) pool = pool.filter(d => d.market === market);
     const ranked = [...pool].sort((a, b) => b[scoreKey] - a[scoreKey]).slice(0, n);
     const rows = ranked.map((d, i) => `
       <div class="rank-row" onclick="openModal('${d.ticker}')">
@@ -157,18 +169,40 @@ window.Markets = (function () {
       </div>`).join('');
     const jumpTab = scoreKey === 'long_term_score' ? 'long' : 'swing';
     return `<div class="tl-panel">
-      <div class="lbl">${icon} ${title} — top ${n} από ${pool.length} στο universe, από την καλύτερη προς τη χειρότερη</div>
-      ${rows}
-      <div class="tdy-link" onclick="selectTab('${jumpTab}')">Δες το πλήρες Top 10 με κάρτες →</div>
+      <div class="lbl">${icon} ${title} — top ${n} από ${pool.length}, από την καλύτερη προς τη χειρότερη</div>
+      ${rows || '<div class="tl-factor-txt">Δεν υπάρχουν ακόμα δεδομένα για αυτή την αγορά.</div>'}
+      <div class="tdy-link" onclick="selectTab('${jumpTab}')">Δες το πλήρες Top 10 με κάρτες (όλες οι αγορές) →</div>
     </div>`;
   }
 
   function renderRankings() {
     const el = document.getElementById('mk-rankings');
     if (!el) return;
-    el.innerHTML =
-      rankedList('Long-Term — κορυφαίες επιλογές', '🏛️', 'long_term_score', 15) +
-      rankedList('Swing — κορυφαίες επιλογές', '⚡', 'swing_score', 15);
+    const data = window.DATA || [];
+    if (!data.length) {
+      el.innerHTML = `<div class="tl-panel"><div class="lbl">🏆 Προτάσεις ανά αγορά</div>
+        <div class="tl-factor-txt">Φόρτωση…</div></div>`;
+      return;
+    }
+    const present = new Set(data.map(d => d.market));
+    const marketsToShow = MARKET_ORDER.filter(m => present.has(m));
+    const chips = marketsToShow.map(m => {
+      const info = MARKET_INFO[m] || { flag: '🏳️', label: m };
+      const count = data.filter(d => d.market === m).length;
+      return `<button class="ev-chip${m === rankingsMarket ? ' active' : ''}" data-market="${m}">${info.flag} ${info.label} <i>(${count})</i></button>`;
+    }).join('');
+    if (!marketsToShow.includes(rankingsMarket)) rankingsMarket = marketsToShow[0] || 'us';
+
+    el.innerHTML = `
+      <div class="lbl">🏆 Προτάσεις ανά αγορά</div>
+      <div class="ev-chips" id="mk-market-chips">${chips}</div>
+      <div id="mk-rank-content"></div>`;
+    el.querySelectorAll('#mk-market-chips button').forEach(b => {
+      b.onclick = () => { rankingsMarket = b.dataset.market; renderRankings(); };
+    });
+    document.getElementById('mk-rank-content').innerHTML =
+      rankedList('Long-Term — κορυφαίες επιλογές', '🏛️', 'long_term_score', 15, rankingsMarket) +
+      rankedList('Swing — κορυφαίες επιλογές', '⚡', 'swing_score', 15, rankingsMarket);
   }
 
   function renderCards() {

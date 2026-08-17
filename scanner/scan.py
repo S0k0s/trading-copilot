@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """
 scan.py — Ξανατρέχει το scoring όλων των μετοχών του trading-copilot dashboard
-και γράφει το ../data.json.
+και γράφει το ../data.json, σε πολλαπλές αγορές (ΗΠΑ + διεθνείς).
 
-Πηγή δεδομένων: stockanalysis.com/stocks/{ticker}/statistics/ (δωρεάν, δημόσιο).
-Μεθοδολογία scoring: ίδια με αυτή που περιγράφεται στο footer του dashboard
-(Long-Term Score & Swing Score, μέσος όρος normalized υπο-δεικτών 0-100).
+Πηγή δεδομένων: stockanalysis.com (δωρεάν, δημόσιο). Μεθοδολογία scoring: ίδια
+με αυτή που περιγράφεται στο footer του dashboard (Long-Term Score & Swing
+Score, μέσος όρος normalized υπο-δεικτών 0-100).
+
+Πολλαπλές αγορές (MARKET_META): κάθε μη-αμερικανική μετοχή αποθηκεύεται με
+επίθημα στο ticker της (σύμβαση Yahoo/Google Finance — π.χ. AZN.L, SAP.DE,
+BHP.AX) ώστε να μη συγκρούεται με ομώνυμα αμερικανικά tickers (π.χ. "T" =
+AT&T στις ΗΠΑ αλλά Telus στον Καναδά) και να παραμένει μοναδικό κλειδί σε
+όλη την εφαρμογή. Οι αμερικανικές μετοχές δεν παίρνουν επίθημα (ίδια
+συμπεριφορά με πριν, ώστε να μη σπάσει το Trading212 sync/θέσεις/journal).
 
 Σχεδιασμένο να είναι ανθεκτικό: αν αποτύχει η ανάκτηση/parsing για μια μετοχή,
 κρατάει τα προηγούμενα γνωστά δεδομένα της αντί να ρίξει όλο το script.
@@ -26,8 +33,8 @@ NEWS_JSON = ROOT / "news.json"
 # Καθυστέρηση μεταξύ requests (δευτ.) — SCAN_SLEEP=0.5 για γρηγορότερο τοπικό run
 SCAN_SLEEP = float(os.environ.get("SCAN_SLEEP", "1.2"))
 
-# Στατικό fallback: ticker -> εμφανιζόμενο όνομα.
-# Το πραγματικό universe έρχεται δυναμικά από τη λίστα S&P 500 (fetch_universe) —
+# Στατικό fallback: ticker -> εμφανιζόμενο όνομα (μόνο ΗΠΑ).
+# Το πραγματικό universe ΗΠΑ έρχεται δυναμικά από τη λίστα S&P 500 (fetch_universe) —
 # αυτό εδώ χρησιμοποιείται μόνο αν αποτύχει το fetch της λίστας.
 TICKERS = {
     "NVDA": "NVIDIA", "GOOGL": "Alphabet", "AAPL": "Apple", "MSFT": "Microsoft",
@@ -55,6 +62,132 @@ TICKERS = {
     "PYPL": "PayPal", "INTU": "Intuit",
 }
 
+# ---------------------------------------------------------------------------
+# V6 — Πολλαπλές αγορές
+# ---------------------------------------------------------------------------
+# exchange_code: το τμήμα της διεύθυνσης stockanalysis.com/quote/{exchange_code}/{ticker}/
+#   (None για ΗΠΑ, που χρησιμοποιεί το παλιό μοτίβο /stocks/{ticker}/)
+# suffix: προστίθεται στο ΔΙΚΟ ΜΑΣ ticker (Yahoo/Google Finance σύμβαση) ώστε να
+#   μένει μοναδικό — π.χ. Telus (Καναδάς) -> "T.TO", ώστε να μη συγκρούεται με
+#   το αμερικανικό "T" (AT&T).
+MARKET_META = {
+    "us": {"label": "ΗΠΑ (S&P 500)",         "flag": "🇺🇸", "suffix": "",    "exchange_code": None},
+    "gr": {"label": "Ελλάδα (ATHEX)",         "flag": "🇬🇷", "suffix": ".AT", "exchange_code": "ath"},
+    "fr": {"label": "Γαλλία (Euronext Paris)", "flag": "🇫🇷", "suffix": ".PA", "exchange_code": "epa"},
+    "jp": {"label": "Ιαπωνία (Tokyo)",        "flag": "🇯🇵", "suffix": ".T",  "exchange_code": "tyo"},
+    "au": {"label": "Αυστραλία (ASX)",        "flag": "🇦🇺", "suffix": ".AX", "exchange_code": "asx"},
+    "uk": {"label": "Ην. Βασίλειο (FTSE 100)", "flag": "🇬🇧", "suffix": ".L",  "exchange_code": "lon"},
+    "de": {"label": "Γερμανία (DAX 40)",      "flag": "🇩🇪", "suffix": ".DE", "exchange_code": "etr"},
+    "hk": {"label": "Hong Kong (Hang Seng)",  "flag": "🇭🇰", "suffix": ".HK", "exchange_code": "hkg"},
+    "ca": {"label": "Καναδάς (TSX 60)",       "flag": "🇨🇦", "suffix": ".TO", "exchange_code": "tsx"},
+}
+
+# "Καθαρές" αγορές: η raw λίστα του stockanalysis.com δεν έχει μόλυνση από
+# δευτερεύουσες εισαγωγές (dual-listings) μεγάλων αμερικανικών εταιρειών —
+# οπότε μπορούμε να πάρουμε απευθείας τις πρώτες N κατά κεφαλαιοποίηση.
+# (url, μέγιστος αριθμός μετοχών)
+DYNAMIC_LIST_URLS = {
+    "gr": ("https://stockanalysis.com/list/athens-stock-exchange/", 100),
+    "fr": ("https://stockanalysis.com/list/euronext-paris/", 40),
+    "jp": ("https://stockanalysis.com/list/tokyo-stock-exchange/", 100),
+    "au": ("https://stockanalysis.com/list/australian-securities-exchange/", 100),
+}
+
+# "Επιμελημένες" αγορές: η raw λίστα του stockanalysis.com είναι κυριαρχημένη
+# από dual-listings μεγάλων αμερικανικών εταιρειών (π.χ. στο LSE η πρώτη θέση
+# κατά κεφαλαιοποίηση είναι η NVIDIA, όχι βρετανική εταιρεία) — χρειάζεται
+# πραγματική λίστα συστατικών δείκτη από αξιόπιστη πηγή (Wikipedia / index
+# provider). Συμπληρώνεται παρακάτω.
+# Πηγή: https://en.wikipedia.org/wiki/FTSE_100_Index ("as of 19 June 2026")
+FTSE_100 = {
+    "III": "3i Group", "ABDN": "Aberdeen Group", "ADM": "Admiral Group", "AAF": "Airtel Africa",
+    "ALW": "Alliance Witan", "AAL": "Anglo American", "ANTO": "Antofagasta", "ABF": "Associated British Foods",
+    "AZN": "AstraZeneca", "AUTO": "Auto Trader Group", "AV": "Aviva", "BAB": "Babcock International",
+    "BA": "BAE Systems", "BARC": "Barclays", "BTRW": "Barratt Redrow", "BEZ": "Beazley",
+    "BP": "BP", "BATS": "British American Tobacco", "BLND": "British Land", "BT.A": "BT Group",
+    "BNZL": "Bunzl", "BRBY": "Burberry", "CNA": "Centrica", "CCEP": "Coca-Cola Europacific Partners",
+    "CCH": "Coca-Cola HBC", "CPG": "Compass Group", "CCC": "Computacenter", "CTEC": "Convatec Group",
+    "CRDA": "Croda International", "DCC": "DCC", "DGE": "Diageo", "DPLM": "Diploma",
+    "EDV": "Endeavour Mining", "ENT": "Entain", "EXPN": "Experian", "FCIT": "F&C Investment Trust",
+    "FRES": "Fresnillo", "GAW": "Games Workshop", "GLEN": "Glencore", "GSK": "GSK",
+    "HLN": "Haleon", "HLMA": "Halma", "HSX": "Hiscox", "HWDN": "Howdens Joinery",
+    "HSBA": "HSBC Holdings", "ICG": "ICG", "IGG": "IG Group", "IHG": "IHG Hotels & Resorts",
+    "IMI": "IMI", "IMB": "Imperial Brands", "INF": "Informa", "IAG": "International Airlines Group",
+    "ITRK": "Intertek Group", "INVP": "Investec", "JD": "JD Sports Fashion", "BGEO": "Lion Finance Group",
+    "KGF": "Kingfisher", "LAND": "Land Securities", "LGEN": "Legal & General", "LLOY": "Lloyds Banking Group",
+    "LMP": "LondonMetric Property", "LSEG": "London Stock Exchange Group", "MNG": "M&G", "MKS": "Marks & Spencer",
+    "MRO": "Melrose Industries", "MTLN": "Metlen Energy & Metals", "NG": "National Grid", "NWG": "NatWest Group",
+    "NXT": "Next", "PSON": "Pearson", "PSH": "Pershing Square Holdings", "PSN": "Persimmon",
+    "PCT": "Polar Capital Technology Trust", "PRU": "Prudential", "RKT": "Reckitt Benckiser", "REL": "RELX",
+    "RTO": "Rentokil Initial", "RIO": "Rio Tinto", "RR": "Rolls-Royce Holdings", "SGE": "Sage Group",
+    "SBRY": "Sainsbury's", "SDR": "Schroders", "SMT": "Scottish Mortgage Investment Trust", "SGRO": "Segro",
+    "SVT": "Severn Trent", "SHEL": "Shell", "SMIN": "Smiths Group", "SN": "Smith & Nephew",
+    "SPX": "Spirax Group", "SSE": "SSE", "STAN": "Standard Chartered", "SDLF": "Standard Life",
+    "STJ": "St. James's Place", "TSCO": "Tesco", "BBOX": "Tritax Big Box REIT", "ULVR": "Unilever",
+    "UU": "United Utilities", "VOD": "Vodafone Group", "WEIR": "Weir Group", "WTB": "Whitbread",
+}
+
+# Πηγή: https://en.wikipedia.org/wiki/DAX ("as of 22 September 2025" — παλαιότερο snapshot
+# από τα υπόλοιπα 3, αλλά η σύνθεση του DAX 40 σπάνια αλλάζει)
+DAX_40 = {
+    "ADS": "Adidas", "AIR": "Airbus", "ALV": "Allianz", "BAS": "BASF",
+    "BAYN": "Bayer", "BEI": "Beiersdorf", "BMW": "BMW", "BNR": "Brenntag",
+    "CBK": "Commerzbank", "CON": "Continental", "DTG": "Daimler Truck", "DBK": "Deutsche Bank",
+    "DB1": "Deutsche Börse", "DHL": "DHL Group", "DTE": "Deutsche Telekom", "EOAN": "E.ON",
+    "FRE": "Fresenius", "FME": "Fresenius Medical Care", "G1A": "GEA Group", "HNR1": "Hannover Re",
+    "HEI": "Heidelberg Materials", "HEN3": "Henkel", "IFX": "Infineon Technologies", "MBG": "Mercedes-Benz Group",
+    "MRK": "Merck KGaA", "MTX": "MTU Aero Engines", "MUV2": "Munich Re", "PAH3": "Porsche SE",
+    "QIA": "Qiagen", "RHM": "Rheinmetall", "RWE": "RWE", "SAP": "SAP",
+    "G24": "Scout24", "SIE": "Siemens", "ENR": "Siemens Energy", "SHL": "Siemens Healthineers",
+    "SY1": "Symrise", "VOW3": "Volkswagen", "VNA": "Vonovia", "ZAL": "Zalando",
+}
+
+# Πηγή: https://en.wikipedia.org/wiki/Hang_Seng_Index ("as of January 2026")
+HANG_SENG = {
+    "0005": "HSBC Holdings", "0388": "HKEX", "0939": "China Construction Bank", "1299": "AIA Group",
+    "1398": "ICBC", "2318": "Ping An Insurance", "2388": "BOC Hong Kong", "2628": "China Life Insurance",
+    "3968": "China Merchants Bank", "3988": "Bank of China", "0002": "CLP Holdings", "0003": "Hong Kong and China Gas",
+    "0006": "Power Assets Holdings", "0836": "China Resources Power", "1038": "CK Infrastructure Holdings", "2688": "ENN Energy",
+    "0012": "Henderson Land Development", "0016": "Sun Hung Kai Properties", "0101": "Hang Lung Properties", "0688": "China Overseas Land & Investment",
+    "0823": "Link REIT", "0960": "Longfor Group", "1109": "China Resources Land", "1113": "CK Asset Holdings",
+    "1209": "China Resources Mixc Lifestyle", "1997": "Wharf REIC", "0001": "CK Hutchison Holdings", "0027": "Galaxy Entertainment Group",
+    "0066": "MTR Corporation", "0175": "Geely Auto", "0241": "Alibaba Health", "0267": "CITIC",
+    "0285": "BYD Electronic", "0288": "WH Group", "0291": "China Resources Beer", "0300": "Midea Group",
+    "0316": "Orient Overseas International", "0322": "Tingyi", "0386": "Sinopec Corp", "0669": "Techtronic Industries",
+    "0700": "Tencent Holdings", "0762": "China Unicom Hong Kong", "0857": "PetroChina", "0868": "Xinyi Glass",
+    "0881": "Zhongsheng Group", "0883": "CNOOC", "0941": "China Mobile", "0968": "Xinyi Solar",
+    "0981": "SMIC", "0992": "Lenovo Group", "1024": "Kuaishou Technology", "1044": "Hengan International",
+    "1088": "China Shenhua Energy", "1093": "CSPC Pharmaceutical Group", "1099": "Sinopharm Group", "1177": "Sino Biopharmaceutical",
+    "1211": "BYD Company", "1378": "China Hongqiao Group", "1810": "Xiaomi", "1876": "Budweiser APAC",
+    "1928": "Sands China", "1929": "Chow Tai Fook Jewellery", "2015": "Li Auto", "2020": "Anta Sports",
+    "2057": "ZTO Express", "2269": "WuXi Biologics", "2313": "Shenzhou International", "2319": "China Mengniu Dairy",
+    "2331": "Li Ning", "2359": "WuXi AppTec", "2382": "Sunny Optical Technology", "2618": "JD Logistics",
+    "2899": "Zijin Mining", "3690": "Meituan", "3692": "Hansoh Pharmaceutical", "6618": "JD Health International",
+    "6690": "Haier Smart Home", "6862": "Haidilao International", "9618": "JD.com", "9633": "Nongfu Spring",
+    "9888": "Baidu", "9961": "Trip.com Group", "9988": "Alibaba Group", "9992": "Pop Mart",
+    "9999": "NetEase",
+}
+
+# Πηγή: https://en.wikipedia.org/wiki/S%26P/TSX_60 ("as of January 31, 2026")
+TSX_60 = {
+    "AEM": "Agnico Eagle Mines", "ATD": "Alimentation Couche-Tard", "BMO": "Bank of Montreal", "BNS": "Bank of Nova Scotia",
+    "ABX": "Barrick Mining", "BCE": "BCE", "BAM": "Brookfield Asset Management", "BN": "Brookfield Corporation",
+    "BIP.UN": "Brookfield Infrastructure Partners", "CAE": "CAE", "CCO": "Cameco", "CM": "Canadian Imperial Bank of Commerce",
+    "CNR": "Canadian National Railway", "CNQ": "Canadian Natural Resources", "CP": "Canadian Pacific Kansas City", "CTC.A": "Canadian Tire",
+    "CCL.B": "CCL Industries", "CLS": "Celestica", "CVE": "Cenovus Energy", "GIB.A": "CGI",
+    "CSU": "Constellation Software", "DOL": "Dollarama", "EMA": "Emera", "ENB": "Enbridge",
+    "FFH": "Fairfax Financial Holdings", "FM": "First Quantum Minerals", "FSV": "FirstService", "FTS": "Fortis",
+    "FNV": "Franco-Nevada", "WN": "George Weston", "GIL": "Gildan Activewear", "H": "Hydro One",
+    "IMO": "Imperial Oil", "IFC": "Intact Financial", "K": "Kinross Gold", "L": "Loblaw Companies",
+    "MG": "Magna International", "MFC": "Manulife Financial", "MRU": "Metro", "NA": "National Bank of Canada",
+    "NTR": "Nutrien", "OTEX": "Open Text", "PPL": "Pembina Pipeline", "POW": "Power Corporation of Canada",
+    "QSR": "Restaurant Brands International", "RCI.B": "Rogers Communications", "RY": "Royal Bank of Canada", "SAP": "Saputo",
+    "SHOP": "Shopify", "SLF": "Sun Life Financial", "SU": "Suncor Energy", "TRP": "TC Energy",
+    "TECK.B": "Teck Resources", "T": "Telus", "TRI": "Thomson Reuters", "TD": "Toronto-Dominion Bank",
+    "TOU": "Tourmaline Oil", "WCN": "Waste Connections", "WPM": "Wheaton Precious Metals", "WSP": "WSP Global",
+}
+STATIC_LISTS = {"uk": FTSE_100, "de": DAX_40, "hk": HANG_SENG, "ca": TSX_60}
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -76,6 +209,16 @@ def _urlopen(req, timeout=25):
     if _SSL_CTX is not None:
         return urlopen(req, timeout=timeout, context=_SSL_CTX)
     return urlopen(req, timeout=timeout)
+
+
+def _base_url(raw_ticker, exchange_code, sub_path=""):
+    """URL builder που δουλεύει και για ΗΠΑ (/stocks/{ticker}/...) και για
+    διεθνείς αγορές (/quote/{exchange_code}/{ticker}/...)."""
+    if exchange_code is None:
+        slug = raw_ticker.lower().replace(".", "-")
+        return f"https://stockanalysis.com/stocks/{slug}/{sub_path}"
+    return f"https://stockanalysis.com/quote/{exchange_code}/{raw_ticker}/{sub_path}"
+
 
 LABELS = {
     "pe_ratio": ["PE Ratio"],
@@ -124,12 +267,11 @@ def to_number(txt):
         return None
 
 
-def fetch_table_map(ticker):
+def fetch_table_map(raw_ticker, exchange_code=None):
     """Κατεβάζει τη σελίδα στατιστικών και επιστρέφει dict label->value_text
     από ΟΛΑ τα label/value ζευγάρια σε <tr> με 2 κελιά, σε όλη τη σελίδα."""
     from bs4 import BeautifulSoup  # lazy: μόνο το stats scraping το χρειάζεται
-    slug = ticker.lower().replace(".", "-")
-    url = f"https://stockanalysis.com/stocks/{slug}/statistics/"
+    url = _base_url(raw_ticker, exchange_code, "statistics/")
     req = Request(url, headers=HEADERS)
     with _urlopen(req) as resp:
         html = resp.read()
@@ -144,7 +286,6 @@ def fetch_table_map(ticker):
                 out[label] = value
     # Τρέχουσα τιμή: πρώτος μεγάλος αριθμός στην κορυφή της σελίδας.
     price = None
-    price_el = soup.select_one("[class*=price], [data-testid*=price]")
     text_blob = soup.get_text("\n", strip=True)
     m = re.search(r"\n([\d,]+\.\d{2,4})\n", "\n" + text_blob)
     if m:
@@ -167,7 +308,7 @@ def _clean_company_name(name):
 
 
 def fetch_universe():
-    """Δυναμικό universe: όλες οι μετοχές του S&P 500 από το stockanalysis.com,
+    """Δυναμικό universe ΗΠΑ: όλες οι μετοχές του S&P 500 από το stockanalysis.com,
     ταξινομημένες κατά κεφαλαιοποίηση. Επιστρέφει dict ticker->name ή None."""
     from bs4 import BeautifulSoup
     url = "https://stockanalysis.com/list/sp-500-stocks/"
@@ -191,7 +332,7 @@ def fetch_universe():
 
 
 def resolve_universe():
-    """Τελικό universe: δυναμική λίστα S&P 500, με τα ονόματα του στατικού
+    """Τελικό universe ΗΠΑ: δυναμική λίστα S&P 500, με τα ονόματα του στατικού
     TICKERS να προηγούνται (πιο σύντομα/οικεία) όπου υπάρχουν."""
     fetched = fetch_universe()
     if not fetched:
@@ -204,11 +345,58 @@ def resolve_universe():
     return merged
 
 
-def fetch_sector_industry(ticker):
+def fetch_market_list(url, cap):
+    """Top-N (κατά κεφαλαιοποίηση) από raw λίστα χρηματιστηρίου — μόνο για τις
+    'καθαρές' αγορές του DYNAMIC_LIST_URLS. Επιστρέφει [(raw_ticker, name), ...]."""
+    from bs4 import BeautifulSoup
+    try:
+        req = Request(url, headers=HEADERS)
+        with _urlopen(req) as resp:
+            soup = BeautifulSoup(resp.read(), "lxml")
+        table = soup.find("table")
+        out = []
+        for tr in (table.find_all("tr")[1:] if table else []):
+            cells = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
+            if len(cells) >= 3 and cells[1]:
+                out.append((cells[1], _clean_company_name(cells[2])))
+            if len(out) >= cap:
+                break
+        return out
+    except Exception as e:
+        print(f"! Αποτυχία λήψης λίστας {url} ({e})")
+        return []
+
+
+def resolve_all_markets():
+    """Πλήρες universe όλων των αγορών: [{ticker, raw, name, market, exchange_code}].
+    'ticker' = το δικό μας μοναδικό σύμβολο (με επίθημα για μη-ΗΠΑ)."""
+    entries = []
+
+    us_universe = resolve_universe()
+    for raw, name in us_universe.items():
+        entries.append({"ticker": raw, "raw": raw, "name": name,
+                         "market": "us", "exchange_code": None})
+
+    for mkt, (url, cap) in DYNAMIC_LIST_URLS.items():
+        meta = MARKET_META[mkt]
+        for raw, name in fetch_market_list(url, cap):
+            entries.append({"ticker": raw + meta["suffix"], "raw": raw, "name": name,
+                             "market": mkt, "exchange_code": meta["exchange_code"]})
+        time.sleep(SCAN_SLEEP)
+
+    for mkt, static_dict in STATIC_LISTS.items():
+        meta = MARKET_META[mkt]
+        for raw, name in static_dict.items():
+            entries.append({"ticker": raw + meta["suffix"], "raw": raw, "name": name,
+                             "market": mkt, "exchange_code": meta["exchange_code"]})
+
+    return entries
+
+
+def fetch_sector_industry(raw_ticker, exchange_code=None):
     """Sector/Industry από τη σελίδα company/ (δεν υπάρχουν στο statistics/)."""
     from bs4 import BeautifulSoup
-    slug = ticker.lower().replace(".", "-")
-    url = f"https://stockanalysis.com/stocks/{slug}/company/"
+    url = _base_url(raw_ticker, exchange_code, "company/")
     req = Request(url, headers=HEADERS)
     with _urlopen(req) as resp:
         soup = BeautifulSoup(resp.read(), "lxml")
@@ -225,12 +413,11 @@ def fetch_sector_industry(ticker):
     return sector, industry
 
 
-def fetch_roe_5y_avg(ticker):
+def fetch_roe_5y_avg(raw_ticker, exchange_code=None):
     """Μ.ο. ROE των 5 τελευταίων fiscal years από τη σελίδα financials/ratios.
     Αγνοεί τη στήλη 'Current' (ttm). Επιστρέφει None αν δεν βρεθεί."""
     from bs4 import BeautifulSoup
-    slug = ticker.lower().replace(".", "-")
-    url = f"https://stockanalysis.com/stocks/{slug}/financials/ratios/"
+    url = _base_url(raw_ticker, exchange_code, "financials/ratios/")
     req = Request(url, headers=HEADERS)
     with _urlopen(req) as resp:
         soup = BeautifulSoup(resp.read(), "lxml")
@@ -308,9 +495,15 @@ def score_from(row):
     return long_term_score, swing_score
 
 
-def scan_ticker(ticker, name, previous):
+def scan_ticker(entry, previous):
+    ticker = entry["ticker"]
+    raw = entry["raw"]
+    name = entry["name"]
+    market = entry["market"]
+    exchange_code = entry["exchange_code"]
+
     try:
-        tbl, price = fetch_table_map(ticker)
+        tbl, price = fetch_table_map(raw, exchange_code)
     except (URLError, HTTPError, TimeoutError, OSError) as e:
         print(f"  ! {ticker}: δικτυακό σφάλμα ({e}) — κρατάω παλιά δεδομένα")
         return previous
@@ -318,6 +511,7 @@ def scan_ticker(ticker, name, previous):
     row = {
         "ticker": ticker,
         "name": name,
+        "market": market,
         "price": price,
         "pe_ratio": to_number(tbl.get("PE Ratio")),
         "peg_ratio": to_number(tbl.get("PEG Ratio")),
@@ -343,7 +537,7 @@ def scan_ticker(ticker, name, previous):
     # ROE μ.ο. 5ετίας (για το quest checklist) — δεύτερο request, ανεκτικό σε αποτυχία
     time.sleep(SCAN_SLEEP * 0.6)
     try:
-        row["roe_5y_avg"] = fetch_roe_5y_avg(ticker)
+        row["roe_5y_avg"] = fetch_roe_5y_avg(raw, exchange_code)
     except Exception as e:
         print(f"  ! {ticker}: αποτυχία ROE 5Y ({e})")
         row["roe_5y_avg"] = previous.get("roe_5y_avg") if previous else None
@@ -351,7 +545,7 @@ def scan_ticker(ticker, name, previous):
     # Sector/Industry (για φίλτρα στο "Όλες οι μετοχές") — τρίτο request, ανεκτικό σε αποτυχία
     time.sleep(SCAN_SLEEP * 0.6)
     try:
-        row["sector"], row["industry"] = fetch_sector_industry(ticker)
+        row["sector"], row["industry"] = fetch_sector_industry(raw, exchange_code)
     except Exception as e:
         print(f"  ! {ticker}: αποτυχία sector/industry ({e})")
         row["sector"] = previous.get("sector") if previous else None
@@ -468,10 +662,9 @@ def _parse_news_time(t):
     return None
 
 
-def fetch_news(ticker):
-    """Επιστρέφει (λίστα από {t, d, s, src, u}, earnings_date ISO ή None)."""
-    slug = ticker.lower().replace(".", "-")
-    url = f"https://stockanalysis.com/stocks/{slug}/__data.json"
+def fetch_news(raw_ticker, exchange_code=None):
+    """Επιστρέφει (λίστα από {t, d, s, src, u}, earnings_date ISO ή None, rev_growth)."""
+    url = _base_url(raw_ticker, exchange_code, "__data.json")
     req = Request(url, headers=HEADERS)
     with _urlopen(req) as resp:
         raw = json.loads(resp.read())
@@ -527,9 +720,9 @@ def ticker_news_summary(items, earnings=None, rev_growth=None):
             "earnings_date": earnings, "revenue_growth_yoy": rev_growth}
 
 
-def scan_news(tickers=None, delay=None):
-    if tickers is None:
-        tickers = resolve_universe()
+def scan_news(entries=None, delay=None):
+    if entries is None:
+        entries = resolve_all_markets()
     if delay is None:
         delay = SCAN_SLEEP * 0.8
     previous = {}
@@ -540,11 +733,12 @@ def scan_news(tickers=None, delay=None):
             pass
 
     tickers_out = {}
-    for i, ticker in enumerate(tickers, 1):
+    for i, entry in enumerate(entries, 1):
+        ticker = entry["ticker"]
         try:
-            items, earnings, rev_growth = fetch_news(ticker)
+            items, earnings, rev_growth = fetch_news(entry["raw"], entry["exchange_code"])
             tickers_out[ticker] = ticker_news_summary(items, earnings, rev_growth)
-            print(f"[{i}/{len(tickers)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
+            print(f"[{i}/{len(entries)}] news {ticker}: {tickers_out[ticker]['n']} άρθρα, "
                   f"sentiment {tickers_out[ticker]['score']:+d}, earnings {earnings or '—'}")
         except Exception as e:
             print(f"  ! news {ticker}: {e} — κρατάω παλιά δεδομένα")
@@ -644,8 +838,12 @@ def main():
         sync_positions()
         return
 
-    tickers = resolve_universe()
-    print(f"Universe: {len(tickers)} μετοχές")
+    entries = resolve_all_markets()
+    by_market = {}
+    for e in entries:
+        by_market[e["market"]] = by_market.get(e["market"], 0) + 1
+    summary = ", ".join(f"{MARKET_META[m]['flag']} {m}={n}" for m, n in by_market.items())
+    print(f"Universe: {len(entries)} μετοχές σε {len(by_market)} αγορές: {summary}")
 
     previous_by_ticker = {}
     if DATA_JSON.exists():
@@ -658,13 +856,13 @@ def main():
 
     results = []
     failures = 0
-    for i, (ticker, name) in enumerate(tickers.items(), 1):
-        print(f"[{i}/{len(tickers)}] {ticker} ({name})")
-        prev = previous_by_ticker.get(ticker)
+    for i, entry in enumerate(entries, 1):
+        print(f"[{i}/{len(entries)}] {entry['ticker']} ({entry['name']}) [{entry['market']}]")
+        prev = previous_by_ticker.get(entry["ticker"])
         try:
-            row = scan_ticker(ticker, name, prev)
+            row = scan_ticker(entry, prev)
         except Exception as e:
-            print(f"  ! {ticker}: απροσδόκητο σφάλμα ({e})")
+            print(f"  ! {entry['ticker']}: απροσδόκητο σφάλμα ({e})")
             row = prev
             failures += 1
         if row:
@@ -684,7 +882,7 @@ def main():
 
     # Ειδήσεις & sentiment για το Trend Lab (ανθεκτικό: αποτυχία εδώ δεν ρίχνει το run)
     try:
-        scan_news(tickers)
+        scan_news(entries)
     except Exception as e:
         print(f"! Το news scan απέτυχε συνολικά ({e}) — το data.json γράφτηκε κανονικά.")
 

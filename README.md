@@ -43,19 +43,32 @@
 ## Πλοήγηση (V5)
 
 5 ενότητες: **🏠 Σήμερα** (dashboard — χαρτοφυλάκιο, mini αγορές, Top 5 picks, earnings εβδομάδας,
-Quest 5/5), **🔎 Σκάνερ** (Top 10, Προτάσεις, Όλες οι μετοχές), **📊 Ανάλυση** (Τάσεις &amp;
-Πρόβλεψη, Event Patterns, Στρατηγικές), **🌍 Markets** (standalone, όπως το Σήμερα — ώρες όλων
-των χρηματιστηρίων, ημερολόγιο earnings, και κατατεταγμένες λίστες Top 15 Long-Term/Swing από
-την καλύτερη προς τη χειρότερη μετοχή του universe), **💼 Χαρτοφυλάκιο** (Θέσεις, Journal). Στο
-κινητό γίνονται fixed bottom nav bar (5 κουμπιά). Καθολική αναζήτηση (`#gsearch`) πάνω-πάνω
-βρίσκει οποιαδήποτε από τις ~500 μετοχές και ανοίγει κατευθείαν το Trend Lab.
+Quest 5/5), **🔎 Σκάνερ** (Top 10, Προτάσεις, Όλες οι μετοχές — με φίλτρα Quest/Earnings/Κλάδου/
+Αγοράς), **📊 Ανάλυση** (Τάσεις &amp; Πρόβλεψη, Event Patterns, Στρατηγικές), **🌍 Markets**
+(standalone, όπως το Σήμερα — ώρες όλων των χρηματιστηρίων, κατατεταγμένες λίστες Top 15
+Long-Term/Swing **ανά αγορά** μέσω chips, μετά ημερολόγιο earnings), **💼 Χαρτοφυλάκιο** (Θέσεις,
+Journal). Στο κινητό γίνονται fixed bottom nav bar (5 κουμπιά). Καθολική αναζήτηση (`#gsearch`)
+πάνω-πάνω βρίσκει οποιαδήποτε μετοχή απ' όλες τις αγορές και ανοίγει κατευθείαν το Trend Lab.
 
-**Universe:** δυναμική λίστα ολόκληρου του S&amp;P 500 (`fetch_universe()` στο scan.py, από
-`stockanalysis.com/list/sp-500-stocks/`, ~500 μετοχές όλων των κλάδων) — ενημερώνεται αυτόματα
-σε κάθε scan, δεν χρειάζεται πλέον χειροκίνητη λίστα tickers.
+**Universe (V6 — πολλαπλές αγορές):** ~1100+ μετοχές σε 9 αγορές (`MARKET_META` στο scan.py):
+🇺🇸 ΗΠΑ (δυναμικό S&amp;P 500), 🇬🇷 Ελλάδα/ATHEX, 🇫🇷 Γαλλία/Euronext Paris, 🇯🇵 Ιαπωνία/Tokyo,
+🇦🇺 Αυστραλία/ASX (αυτές οι 4 "καθαρές" — δυναμικό top-N scrape, καμία μόλυνση από dual-listings),
+και 🇬🇧 UK/FTSE 100, 🇩🇪 Γερμανία/DAX 40, 🇭🇰 Hong Kong/Hang Seng, 🇨🇦 Καναδάς/TSX 60 (αυτές
+"επιμελημένες" — στατική λίστα από Wikipedia, γιατί η raw λίστα του stockanalysis.com για μεγάλα
+exchanges όπως το LSE είναι κυριαρχημένη από δευτερεύουσες εισαγωγές μεγάλων αμερικανικών
+εταιρειών — π.χ. στο LSE η πρώτη θέση κατά κεφαλαιοποίηση είναι η NVIDIA, όχι βρετανική εταιρεία).
+
+Κάθε μη-αμερικανική μετοχή παίρνει επίθημα στο ticker της (σύμβαση Yahoo/Google Finance — π.χ.
+`AZN.L`, `SAP.DE`, `BHP.AX`) ώστε να μένει μοναδικό παγκοσμίως και να μη συγκρούεται με ομώνυμα
+αμερικανικά tickers (π.χ. "T" = AT&amp;T στις ΗΠΑ, "T.TO" = Telus στον Καναδά). Γνωστός περιορισμός:
+το ιστορικό τιμών του Trend Lab/Στρατηγικών (`Analysis.fetchHistory`) δουλεύει προς το παρόν μόνο
+για ΗΠΑ — δείχνει σαφές μήνυμα αντί να σπάει για διεθνείς μετοχές· όλα τα υπόλοιπα (scores, Quest,
+sector, earnings, ειδήσεις, live TradingView chart στο modal) δουλεύουν κανονικά παντού.
 
 **Cache-busting:** τα `assets/*.js` φορτώνονται με `?v=N` query param· ανέβασε το `N` όταν
-αλλάζεις κάποιο asset ώστε οι browsers να μην κρατήσουν παλιά έκδοση σε cache.
+αλλάζεις κάποιο asset ώστε οι browsers να μην κρατήσουν παλιά έκδοση σε cache (εντοπίστηκε
+aggressive heuristic caching σε plain-served .js χωρίς cache headers — δεν καθάριζε ούτε με
+restart του server, μόνο με cache-busted URL).
 
 ## Αυτόματο sync θέσεων από Trading212
 
@@ -92,12 +105,19 @@ scores, με σύντομη αιτιολόγηση ανά μετοχή από τ
 
 ## Πηγές δεδομένων
 
-- **Θεμελιώδη/στατιστικά:** scrape του stockanalysis.com/stocks/{ticker}/statistics/ (scanner).
+- **Θεμελιώδη/στατιστικά:** scrape του stockanalysis.com — ΗΠΑ: `/stocks/{ticker}/statistics/`,
+  διεθνείς αγορές: `/quote/{exchange_code}/{ticker}/statistics/` (π.χ. `/quote/lon/AZN/`). Ίδιο
+  μοτίβο και για `financials/ratios/` (ROE 5ετίας), `company/` (sector/industry), `__data.json`
+  (ειδήσεις/earnings) — βλ. `_base_url()` στο scan.py.
+- **Λίστες αγορών:** `stockanalysis.com/list/{exchange-slug}/` (π.χ. `sp-500-stocks`,
+  `athens-stock-exchange`) για τις "καθαρές" αγορές· στατικές λίστες (Wikipedia) για τις
+  "επιμελημένες" — βλ. `FTSE_100`/`DAX_40`/`HANG_SENG`/`TSX_60` στο scan.py.
 - **Ιστορικά OHLCV:** `stockanalysis.com/api/symbol/s/{TICKER}/history?range=…&period=Daily` —
-  ανοιχτό CORS, καλείται client-side με cache 6h στο localStorage.
-- **Ειδήσεις:** `stockanalysis.com/stocks/{slug}/__data.json` (SvelteKit devalue format) —
+  ανοιχτό CORS, καλείται client-side με cache 6h στο localStorage. **Μόνο ΗΠΑ** προς το παρόν.
+- **Ειδήσεις:** `stockanalysis.com/{stocks|quote}/.../__data.json` (SvelteKit devalue format) —
   γίνεται decode στον scanner, sentiment με λεξικό λέξεων, αποτέλεσμα στο `news.json`.
-- **Live charts στα modals:** δωρεάν TradingView widget.
+- **Live charts στα modals:** δωρεάν TradingView widget, με exchange-aware symbol mapping
+  (`TV_EXCHANGE_PREFIX` στο index.html — π.χ. `.L` → `LSE:`) — best-effort, όχι εγγυημένο 100%.
 
 ## Τοπικό τρέξιμο
 
