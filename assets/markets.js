@@ -132,8 +132,8 @@ window.Markets = (function () {
       <div class="note">Οι ώρες αφορούν κανονικές συνεδριάσεις Δευτέρα–Παρασκευή και προσαρμόζονται αυτόματα σε
       θερινή/χειμερινή ώρα κάθε χώρας. Δεν περιλαμβάνονται τοπικές αργίες. Για NYSE/NASDAQ εμφανίζεται και
       pre-market (04:00–09:30 ΝΥ) / after-hours (16:00–20:00 ΝΥ).</div>
-      <div id="mk-earnings"></div>
-      <div id="mk-rankings"></div>`;
+      <div id="mk-rankings"></div>
+      <div id="mk-earnings"></div>`;
     initialized = true;
   }
 
@@ -307,8 +307,8 @@ window.Markets = (function () {
     ensureSkeleton();
     renderCards();
     renderTimeline();
-    renderEarnings();
     renderRankings();
+    renderEarnings();
     tick();
     if (!timer) {
       timer = setInterval(() => {
