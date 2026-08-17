@@ -75,7 +75,7 @@
     .nav-groups{position:fixed;left:0;right:0;bottom:0;margin:0;gap:4px;z-index:60;
       padding:8px 10px calc(8px + env(safe-area-inset-bottom));
       background:var(--panel);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.35);}
-    .nav-group{padding:9px 3px;font-size:11px;border-radius:8px;}
+    .nav-group{padding:9px 2px;font-size:10px;border-radius:8px;line-height:1.25;}
   }
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
@@ -267,6 +267,13 @@
   .mk-seg-demo{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:5px;vertical-align:baseline;}
   .mk-seg-demo.main{background:rgba(62,207,142,.55);}
   .mk-seg-demo.ext{background:rgba(232,197,71,.3);}
+  .rank-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+    background:var(--panel2);margin-bottom:6px;cursor:pointer;font-size:13px;}
+  .rank-row:hover{background:#242a35;}
+  .rank-num{color:var(--muted);font-size:11px;width:24px;flex-shrink:0;}
+  .rank-tk{min-width:52px;}
+  .rank-name{flex:1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-score{font-weight:700;min-width:42px;text-align:right;}
 
   .ev-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
   .ev-chip{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;
@@ -413,6 +420,7 @@
     <div class="nav-group active" data-group="today">🏠 Σήμερα</div>
     <div class="nav-group" data-group="scanner">🔎 Σκάνερ</div>
     <div class="nav-group" data-group="analysis">📊 Ανάλυση</div>
+    <div class="nav-group" data-group="markets">🌍 Markets</div>
     <div class="nav-group" data-group="portfolio">💼 Χαρτοφυλάκιο</div>
   </nav>
   <div class="subtabs" id="subtabs" style="display:none;"></div>
@@ -489,12 +497,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=6"></script>
-<script src="assets/trendlab.js?v=6"></script>
-<script src="assets/markets.js?v=6"></script>
-<script src="assets/events.js?v=6"></script>
-<script src="assets/strategies.js?v=6"></script>
-<script src="assets/today.js?v=6"></script>
+<script src="assets/analysis.js?v=7"></script>
+<script src="assets/trendlab.js?v=7"></script>
+<script src="assets/markets.js?v=7"></script>
+<script src="assets/events.js?v=7"></script>
+<script src="assets/strategies.js?v=7"></script>
+<script src="assets/today.js?v=7"></script>
 <script>
 let DATA = [];
 
@@ -836,21 +844,23 @@ let currentTab = 'today';
 let currentGroup = 'today';
 let sortKey = 'long_term_score', sortDir = -1;
 
-// --- V5: 4 ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
+// --- V5: ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
+// «Σήμερα» και «Markets» είναι standalone — δεν έχουν subtabs, το group name == το tab name.
+const STANDALONE_TABS = ['today','markets'];
 const GROUPS = {
   scanner:   { tabs: ['long','swing','suggestions','all'] },
   analysis:  { tabs: ['trend','events','strategies'] },
-  portfolio: { tabs: ['positions','markets','journal'] },
+  portfolio: { tabs: ['positions','journal'] },
 };
 const TAB_LABELS = {
   long: '🏛️ Long-Term Top 10', swing: '⚡ Swing Top 10', suggestions: '🔍 Προτάσεις', all: '📋 Όλες οι μετοχές',
   trend: '📊 Τάσεις &amp; Πρόβλεψη', events: '🗓️ Event Patterns', strategies: '🧭 Στρατηγικές',
-  positions: '💼 Οι Θέσεις Μου', markets: '🕒 Αγορές &amp; Earnings', journal: '📓 Journal',
+  positions: '💼 Οι Θέσεις Μου', journal: '📓 Journal',
 };
 const lastTabByGroup = {};
 
 function tabToGroup(tab){
-  if(tab==='today') return 'today';
+  if(STANDALONE_TABS.includes(tab)) return tab;
   for(const g in GROUPS){ if(GROUPS[g].tabs.includes(tab)) return g; }
   return 'today';
 }
@@ -870,7 +880,7 @@ function selectTab(tab){
   if(targetGroup !== currentGroup){
     currentGroup = targetGroup;
     document.querySelectorAll('.nav-group').forEach(g=>g.classList.toggle('active', g.dataset.group===currentGroup));
-    renderSubtabs(targetGroup==='today' ? null : targetGroup);
+    renderSubtabs(STANDALONE_TABS.includes(targetGroup) ? null : targetGroup);
   }
   applyTab(tab, filteredData());
 }
@@ -878,7 +888,7 @@ function selectTab(tab){
 document.querySelectorAll('.nav-group').forEach(g=>{
   g.onclick = () => {
     const grp = g.dataset.group;
-    const tab = grp==='today' ? 'today' : (lastTabByGroup[grp] || GROUPS[grp].tabs[0]);
+    const tab = GROUPS[grp] ? (lastTabByGroup[grp] || GROUPS[grp].tabs[0]) : grp;
     selectTab(tab);
   };
 });

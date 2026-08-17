@@ -132,8 +132,43 @@ window.Markets = (function () {
       <div class="note">Οι ώρες αφορούν κανονικές συνεδριάσεις Δευτέρα–Παρασκευή και προσαρμόζονται αυτόματα σε
       θερινή/χειμερινή ώρα κάθε χώρας. Δεν περιλαμβάνονται τοπικές αργίες. Για NYSE/NASDAQ εμφανίζεται και
       pre-market (04:00–09:30 ΝΥ) / after-hours (16:00–20:00 ΝΥ).</div>
-      <div id="mk-earnings"></div>`;
+      <div id="mk-earnings"></div>
+      <div id="mk-rankings"></div>`;
     initialized = true;
+  }
+
+  /* ---------------- Κατατεταγμένες προτάσεις (Long-Term / Swing) --------- */
+
+  function rankedList(title, icon, scoreKey, n) {
+    const data = window.DATA || [];
+    if (!data.length) {
+      return `<div class="tl-panel"><div class="lbl">${icon} ${title}</div>
+        <div class="tl-factor-txt">Φόρτωση…</div></div>`;
+    }
+    const pool = data.filter(d => d[scoreKey] != null);
+    const ranked = [...pool].sort((a, b) => b[scoreKey] - a[scoreKey]).slice(0, n);
+    const rows = ranked.map((d, i) => `
+      <div class="rank-row" onclick="openModal('${d.ticker}')">
+        <span class="rank-num">#${i + 1}</span>
+        <b class="rank-tk">${d.ticker}</b>
+        <span class="rank-name">${d.name || ''}</span>
+        <span class="badge ${badgeClass(d.analyst_consensus)}">${d.analyst_consensus || '—'}</span>
+        <span class="rank-score" style="color:${scoreColor(d[scoreKey])}">${d[scoreKey]}</span>
+      </div>`).join('');
+    const jumpTab = scoreKey === 'long_term_score' ? 'long' : 'swing';
+    return `<div class="tl-panel">
+      <div class="lbl">${icon} ${title} — top ${n} από ${pool.length} στο universe, από την καλύτερη προς τη χειρότερη</div>
+      ${rows}
+      <div class="tdy-link" onclick="selectTab('${jumpTab}')">Δες το πλήρες Top 10 με κάρτες →</div>
+    </div>`;
+  }
+
+  function renderRankings() {
+    const el = document.getElementById('mk-rankings');
+    if (!el) return;
+    el.innerHTML =
+      rankedList('Long-Term — κορυφαίες επιλογές', '🏛️', 'long_term_score', 15) +
+      rankedList('Swing — κορυφαίες επιλογές', '⚡', 'swing_score', 15);
   }
 
   function renderCards() {
@@ -273,6 +308,7 @@ window.Markets = (function () {
     renderCards();
     renderTimeline();
     renderEarnings();
+    renderRankings();
     tick();
     if (!timer) {
       timer = setInterval(() => {
