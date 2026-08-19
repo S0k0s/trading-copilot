@@ -28,6 +28,18 @@ window.Today = (function () {
       const pnl = c.ppl, inv = c.invested;
       const pct = (inv && pnl != null) ? pnl / inv * 100 : null;
       const col = (pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const posRows = t.positions.map(p => {
+        const value = (p.current_price != null && p.quantity != null) ? p.current_price * p.quantity : null;
+        const pnlPct = (p.avg_price && p.current_price) ? (p.current_price - p.avg_price) / p.avg_price * 100 : null;
+        const pcol = (pnlPct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+        return `<div class="tdy-pf-pos-row" onclick="openModal('${p.ticker}')">
+          <div class="tdy-pf-pos-tk"><b class="num">${p.ticker}</b><span class="tdy-pf-pos-entry">είσοδος $${p.avg_price != null ? p.avg_price.toFixed(2) : '—'}</span></div>
+          <div class="tdy-pf-pos-right">
+            <span class="num" style="color:${pcol}">${pnlPct != null ? (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%' : '—'}</span>
+            <b class="num">${value != null ? '$' + value.toFixed(2) : '—'}</b>
+          </div>
+        </div>`;
+      }).join('');
       return `<div class="tl-panel">
         <div class="lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <span>💼 Χαρτοφυλάκιο <i style="color:var(--muted);font-weight:400;text-transform:none;">· live sync Trading212</i></span>
@@ -38,6 +50,7 @@ window.Today = (function () {
           <div><span class="tdy-lbl">P&amp;L</span><b class="num" style="color:${col}">${pnl != null ? pfEuro(pnl) : '—'}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}</b></div>
           <div><span class="tdy-lbl">Θέσεις</span><b class="num">${t.positions.length}</b></div>
         </div>
+        <div class="tdy-pf-positions">${posRows}</div>
         <div class="tdy-link" onclick="selectTab('positions')">Δες αναλυτικά →</div>
       </div>`;
     }

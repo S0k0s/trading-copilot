@@ -357,6 +357,13 @@
   .tdy-pf-row{display:flex;gap:24px;flex-wrap:wrap;margin:10px 0;}
   .tdy-pf-row .tdy-lbl{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
   .tdy-pf-row b{font-size:16px;}
+  .tdy-pf-positions{display:flex;flex-direction:column;margin:4px 0 2px;}
+  .tdy-pf-pos-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;
+    padding:8px 0;border-top:1px solid var(--border);cursor:pointer;}
+  .tdy-pf-pos-row:hover{color:var(--accent);}
+  .tdy-pf-pos-tk{display:flex;align-items:baseline;gap:7px;}
+  .tdy-pf-pos-entry{color:var(--muted);font-size:11px;}
+  .tdy-pf-pos-right{display:flex;align-items:baseline;gap:12px;}
   .tdy-mkt-row{display:flex;flex-direction:column;gap:9px;margin:10px 0;font-size:13.5px;}
   .tdy-mkt i{color:var(--muted);font-style:normal;margin-left:5px;}
   .tdy-link{font-size:12.5px;color:var(--accent);cursor:pointer;margin-top:6px;display:inline-block;}
@@ -508,7 +515,7 @@
 <script src="assets/markets.js?v=14"></script>
 <script src="assets/events.js?v=14"></script>
 <script src="assets/strategies.js?v=14"></script>
-<script src="assets/today.js?v=15"></script>
+<script src="assets/today.js?v=16"></script>
 <script src="assets/performance.js?v=14"></script>
 <script src="assets/risk.js?v=14"></script>
 <script>
@@ -697,6 +704,7 @@ function renderLivePositions(wrap){
           <div><span>Μετοχές</span>${p.quantity!=null?p.quantity:'—'}</div>
           <div><span>Μέση τιμή εισόδου</span>${p.avg_price!=null?('$'+p.avg_price):'—'}</div>
           <div><span>Τιμή στο sync</span>${p.current_price!=null?('$'+p.current_price):'—'}</div>
+          <div><span>Τρέχουσα αξία</span>${(p.current_price!=null&&p.quantity!=null)?('$'+(p.current_price*p.quantity).toFixed(2)):'—'}</div>
           <div><span>Απόδοση (σε $)</span><span style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct!=null?(pct>=0?'+':'')+pct.toFixed(2)+'%':'—'}</span></div>
           <div><span>P&amp;L (€, με FX)</span><span style="color:${col}">${p.ppl!=null?pfFmtEUR(p.ppl):'—'}</span></div>
           <div><span>Stop-loss</span>${m&&m.stop?('$'+m.stop):'—'}</div>
