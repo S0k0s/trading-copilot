@@ -462,10 +462,53 @@ window.Analysis = (function () {
     return { date: d, days };
   }
 
+  /* ------------- Sparklines ------------------------------------------------ */
+
+  /**
+   * Μικρό inline SVG sparkline από κλεισίματα bars. Πράσινο αν η τελευταία
+   * τιμή είναι ≥ την πρώτη, αλλιώς κόκκινο. Καμία ετικέτα/άξονας — μόνο σχήμα.
+   */
+  function sparklineSVG(bars, w, h) {
+    w = w || 64; h = h || 22;
+    if (!bars || bars.length < 2) return '';
+    const closes = bars.map(b => b.c);
+    const lo = Math.min(...closes), hi = Math.max(...closes);
+    const span = (hi - lo) || 1;
+    const pad = 2;
+    const pts = closes.map((c, i) => {
+      const x = (i / (closes.length - 1)) * w;
+      const y = pad + (1 - (c - lo) / span) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const up = closes[closes.length - 1] >= closes[0];
+    const color = up ? '#3ecf8e' : '#e5626b';
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  /**
+   * Γεμίζει async όλα τα elements `selector` μέσα σε `root` που έχουν
+   * data-ticker, με sparkline 3M (cache 6h ήδη στο fetchHistory). Αθόρυβη
+   * αποτυχία ανά ticker — δεν μπλοκάρει τα υπόλοιπα.
+   */
+  function fillSparklines(root, selector) {
+    const holders = (root || document).querySelectorAll(selector || '.spark-holder');
+    holders.forEach(async (el) => {
+      const ticker = el.dataset.ticker;
+      if (!ticker) return;
+      try {
+        const bars = await fetchHistory(ticker, '3M');
+        el.innerHTML = sparklineSVG(bars);
+      } catch (e) { /* σιωπηλά — το sparkline είναι διακοσμητικό */ }
+    });
+  }
+
   return {
     fetchHistory, sma, rsi, atr, linreg,
     findPivots, detectChannel, projection, predictTrend,
     btBuyHold, btMaTrend, btPullback,
     setupCanvas, niceTicks, clamp, earningsInfo, questChecklist,
+    sparklineSVG, fillSparklines,
   };
 })();

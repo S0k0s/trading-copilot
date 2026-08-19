@@ -98,6 +98,7 @@ window.Today = (function () {
     const flag = (typeof marketFlag === 'function') ? marketFlag(d.market) + ' ' : '';
     return `<div class="pick-card" onclick="openModal('${d.ticker}')">
       <div class="pick-hd">${flag}<b class="num">${d.ticker}</b>${q}<span class="pick-name">${d.name || ''}</span>
+        <span class="spark-holder pick-spark" data-ticker="${d.ticker}"></span>
         <span class="num pick-score" style="color:${scoreCol}">${score != null ? score.toFixed(1) : '—'}</span></div>
       <div class="pick-reason">${reasonFn(d)}</div>
     </div>`;
@@ -210,6 +211,7 @@ window.Today = (function () {
       ${earningsSection()}
       ${questSection()}
     `;
+    window.Analysis && Analysis.fillSparklines(wrap, '.pick-spark');
   }
 
   return { render };

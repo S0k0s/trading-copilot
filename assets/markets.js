@@ -164,6 +164,7 @@ window.Markets = (function () {
         <span class="rank-num num">#${i + 1}</span>
         <b class="rank-tk num">${d.ticker}</b>
         <span class="rank-name">${d.name || ''}</span>
+        <span class="spark-holder rank-spark" data-ticker="${d.ticker}"></span>
         <span class="badge ${badgeClass(d.analyst_consensus)}">${d.analyst_consensus || '—'}</span>
         <span class="rank-score num" style="color:${scoreColor(d[scoreKey])}">${d[scoreKey]}</span>
       </div>`).join('');
@@ -200,9 +201,11 @@ window.Markets = (function () {
     el.querySelectorAll('#mk-market-chips button').forEach(b => {
       b.onclick = () => { rankingsMarket = b.dataset.market; renderRankings(); };
     });
-    document.getElementById('mk-rank-content').innerHTML =
+    const rankContent = document.getElementById('mk-rank-content');
+    rankContent.innerHTML =
       rankedList('Long-Term — κορυφαίες επιλογές', '🏛️', 'long_term_score', 15, rankingsMarket) +
       rankedList('Swing — κορυφαίες επιλογές', '⚡', 'swing_score', 15, rankingsMarket);
+    window.Analysis && Analysis.fillSparklines(rankContent, '.rank-spark');
   }
 
   function renderCards() {

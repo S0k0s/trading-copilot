@@ -90,6 +90,7 @@
   .card .rank{font-size:11px;color:var(--muted);}
   .card .tk{font-size:18px;font-weight:700;}
   .card .nm{font-size:12px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .spark-holder{height:22px;margin-bottom:8px;opacity:.9;}
   .score-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:13px;font-weight:700;}
   table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden;
     box-shadow:var(--shadow);font-size:13px;}
@@ -283,7 +284,32 @@
   .rank-num{color:var(--muted);font-size:11px;width:24px;flex-shrink:0;}
   .rank-tk{min-width:52px;}
   .rank-name{flex:1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-spark{width:48px;height:18px;flex-shrink:0;display:block;}
+  .rank-spark svg{width:100%;height:100%;}
   .rank-score{font-weight:700;min-width:42px;text-align:right;}
+
+  /* --- Ρίσκο Χαρτοφυλακίου --- */
+  .risk-heat-row{margin:10px 0 16px;}
+  .risk-heat-box{background:var(--panel2);border-radius:10px;padding:16px 18px;}
+  .risk-heat-big{font-family:var(--mono);font-size:30px;font-weight:800;}
+  .risk-heat-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media(max-width:640px){.risk-grid{grid-template-columns:1fr;}}
+  .risk-subhd{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;}
+  .risk-conc-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px;}
+  .risk-conc-lbl{width:110px;flex-shrink:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .risk-conc-bar{flex:1;height:8px;background:#0007;border-radius:4px;overflow:hidden;}
+  .risk-conc-bar>div{height:100%;border-radius:4px;}
+  .risk-conc-pct{width:36px;text-align:right;font-family:var(--mono);flex-shrink:0;}
+  .risk-pos-hd{display:grid;grid-template-columns:70px 1fr 70px 110px 90px;gap:8px;font-size:10.5px;
+    color:var(--dim,var(--muted));text-transform:uppercase;letter-spacing:.04em;padding:0 12px 6px;}
+  .risk-pos-row{display:grid;grid-template-columns:70px 1fr 70px 110px 90px;gap:8px;align-items:center;
+    padding:9px 12px;border-radius:8px;background:var(--panel2);margin-bottom:6px;cursor:pointer;font-size:12.5px;}
+  .risk-pos-row:hover{background:#242a35;}
+  .risk-pos-name{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .risk-pos-pct,.risk-pos-stop,.risk-pos-risk{text-align:right;}
+  .risk-pos-stop i,.risk-pos-risk i{color:var(--dim,var(--muted));font-style:normal;font-size:10px;}
+  .risk-pos-risk{color:var(--red);font-weight:600;}
   .perf-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px;}
   .perf-stat-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
   .perf-stat-card .lbl{margin-bottom:6px;}
@@ -341,6 +367,8 @@
   .pick-hd b{font-size:14px;}
   .pick-name{color:var(--muted);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pick-score{font-size:13px;font-weight:700;flex-shrink:0;}
+  .pick-spark{width:44px;height:18px;flex-shrink:0;display:block;}
+  .pick-spark svg{width:100%;height:100%;}
   .pick-reason{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
 
   /* Earnings ημερολόγιο + badges */
@@ -464,13 +492,14 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=13"></script>
-<script src="assets/trendlab.js?v=13"></script>
-<script src="assets/markets.js?v=13"></script>
-<script src="assets/events.js?v=13"></script>
-<script src="assets/strategies.js?v=13"></script>
-<script src="assets/today.js?v=13"></script>
-<script src="assets/performance.js?v=13"></script>
+<script src="assets/analysis.js?v=14"></script>
+<script src="assets/trendlab.js?v=14"></script>
+<script src="assets/markets.js?v=14"></script>
+<script src="assets/events.js?v=14"></script>
+<script src="assets/strategies.js?v=14"></script>
+<script src="assets/today.js?v=14"></script>
+<script src="assets/performance.js?v=14"></script>
+<script src="assets/risk.js?v=14"></script>
 <script>
 let DATA = [];
 
@@ -648,8 +677,9 @@ function renderLivePositions(wrap){
   }).join('');
   const syncNote = `<div class="cat-desc">🔄 Αυτόματο sync από Trading212 (${t.mode==='demo'?'practice/demo':'live'}) ·
     τελευταίο: ${formatUpdated(t.last_updated)}</div>`;
-  wrap.innerHTML = syncNote + renderLiveSummary(t) + `<div class="positions">${cards}</div>`;
+  wrap.innerHTML = syncNote + renderLiveSummary(t) + `<div id="portfolio-risk"></div><div class="positions">${cards}</div>`;
   wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
+  window.PortfolioRisk && PortfolioRisk.render('portfolio-risk');
 }
 
 function renderPositions(){
@@ -693,8 +723,9 @@ function renderPositions(){
   }).join('');
   const manualNote = `<div class="cat-desc">✍️ Χειροκίνητα καταχωρημένες θέσεις — για αυτόματο sync από το
     Trading212, όρισε το secret <b>T212_API_KEY</b> στο GitHub repo (οδηγίες στο README).</div>`;
-  wrap.innerHTML = manualNote + renderPortfolioSummary() + `<div class="positions">${cardsHtml}</div>`;
+  wrap.innerHTML = manualNote + renderPortfolioSummary() + `<div id="portfolio-risk"></div><div class="positions">${cardsHtml}</div>`;
   wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
+  window.PortfolioRisk && PortfolioRisk.render('portfolio-risk');
 }
 
 // ---- Trading Journal (αποθηκεύεται τοπικά στον browser σου — localStorage) ----
@@ -898,12 +929,14 @@ function renderCards(list, scoreKey){
       <div class="rank">#${i+1}</div>
       <div class="tk">${marketFlag(d.market)} ${d.ticker}</div>
       <div class="nm">${d.name||''}</div>
+      <div class="spark-holder" data-ticker="${d.ticker}"></div>
       <span class="score-pill num" style="background:${scoreColor(d[scoreKey])}22;color:${scoreColor(d[scoreKey])}">
         ${scoreKey==='long_term_score'?'LT':'SW'} ${fmt(d[scoreKey])}
       </span>
       ${d.quest_pass===5?'<div><span class="quest-badge">🎯 Quest 5/5</span></div>':''}
     </div>`).join('');
   cards.querySelectorAll('.card').forEach(c=>c.onclick=()=>openModal(c.dataset.ticker));
+  window.Analysis && Analysis.fillSparklines(cards, '.spark-holder');
 }
 
 function renderTable(list){
