@@ -28,15 +28,14 @@ window.Today = (function () {
       const pnl = c.ppl, inv = c.invested;
       const pct = (inv && pnl != null) ? pnl / inv * 100 : null;
       const col = (pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
-      const posRows = t.positions.map(p => {
-        const value = (p.current_price != null && p.quantity != null) ? p.current_price * p.quantity : null;
+      const posRows = window.t212EurValues(t).map(p => {
         const pnlPct = (p.avg_price && p.current_price) ? (p.current_price - p.avg_price) / p.avg_price * 100 : null;
         const pcol = (pnlPct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
         return `<div class="tdy-pf-pos-row" onclick="openModal('${p.ticker}')">
           <div class="tdy-pf-pos-tk"><b class="num">${p.ticker}</b><span class="tdy-pf-pos-entry">είσοδος $${p.avg_price != null ? p.avg_price.toFixed(2) : '—'}</span></div>
           <div class="tdy-pf-pos-right">
             <span class="num" style="color:${pcol}">${pnlPct != null ? (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%' : '—'}</span>
-            <b class="num">${value != null ? '$' + value.toFixed(2) : '—'}</b>
+            <b class="num">${p.valueEur != null ? '€' + p.valueEur.toFixed(2) : '—'}</b>
           </div>
         </div>`;
       }).join('');

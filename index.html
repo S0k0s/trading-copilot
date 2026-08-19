@@ -515,7 +515,7 @@
 <script src="assets/markets.js?v=14"></script>
 <script src="assets/events.js?v=14"></script>
 <script src="assets/strategies.js?v=14"></script>
-<script src="assets/today.js?v=16"></script>
+<script src="assets/today.js?v=17"></script>
 <script src="assets/performance.js?v=14"></script>
 <script src="assets/risk.js?v=14"></script>
 <script>
@@ -664,6 +664,25 @@ function renderLiveSummary(t){
   </div>`;
 }
 
+// Το Trading212 δεν επιστρέφει τιμή θέσης στο νόμισμα λογαριασμού (€) — μόνο στο
+// νόμισμα συναλλαγής του instrument (π.χ. $ για ΗΠΑ). Το p.ppl ΕΙΝΑΙ ήδη σε €.
+// Κατανέμουμε το γνωστό-σε-€ t.cash.invested αναλογικά στις θέσεις (βάσει κόστους
+// στο νόμισμα συναλλαγής) για να πάρουμε εκτιμώμενο κόστος σε €, και προσθέτουμε
+// το ppl (€) για την τρέχουσα αξία σε €. Με μία θέση, είναι ακριβές (ισούται με
+// cash.invested + ppl).
+function t212EurValues(t){
+  const positions = (t && Array.isArray(t.positions)) ? t.positions : [];
+  const investedEurTotal = (t.cash && t.cash.invested != null) ? t.cash.invested : null;
+  const totalCostNative = positions.reduce((s,p)=> s + ((p.avg_price!=null&&p.quantity!=null)?p.avg_price*p.quantity:0), 0);
+  return positions.map(p=>{
+    const costNative = (p.avg_price!=null&&p.quantity!=null) ? p.avg_price*p.quantity : null;
+    const share = (investedEurTotal!=null && totalCostNative>0 && costNative!=null) ? costNative/totalCostNative : null;
+    const investedEur = share!=null ? investedEurTotal*share : null;
+    const valueEur = (investedEur!=null && p.ppl!=null) ? investedEur+p.ppl : null;
+    return Object.assign({}, p, { investedEur, valueEur });
+  });
+}
+
 const T212_PROXY_URL = 'https://t212-portfolio-proxy.sokratispoun.workers.dev/';
 
 async function refreshT212Live(btn){
@@ -688,7 +707,7 @@ function renderLivePositions(wrap){
   const t = window.T212;
   const manualByTicker = {};
   POSITIONS.forEach(p=>{ manualByTicker[p.ticker] = p; });
-  const cards = t.positions.map(p=>{
+  const cards = t212EurValues(t).map(p=>{
     const d = DATA.find(x=>x.ticker===p.ticker) || {};
     const m = manualByTicker[p.ticker];
     const pct = (p.avg_price && p.current_price) ? (p.current_price-p.avg_price)/p.avg_price*100 : null;
@@ -704,7 +723,7 @@ function renderLivePositions(wrap){
           <div><span>Μετοχές</span>${p.quantity!=null?p.quantity:'—'}</div>
           <div><span>Μέση τιμή εισόδου</span>${p.avg_price!=null?('$'+p.avg_price):'—'}</div>
           <div><span>Τιμή στο sync</span>${p.current_price!=null?('$'+p.current_price):'—'}</div>
-          <div><span>Τρέχουσα αξία</span>${(p.current_price!=null&&p.quantity!=null)?('$'+(p.current_price*p.quantity).toFixed(2)):'—'}</div>
+          <div><span>Τρέχουσα αξία</span>${p.valueEur!=null?('€'+p.valueEur.toFixed(2)):'—'}</div>
           <div><span>Απόδοση (σε $)</span><span style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct!=null?(pct>=0?'+':'')+pct.toFixed(2)+'%':'—'}</span></div>
           <div><span>P&amp;L (€, με FX)</span><span style="color:${col}">${p.ppl!=null?pfFmtEUR(p.ppl):'—'}</span></div>
           <div><span>Stop-loss</span>${m&&m.stop?('$'+m.stop):'—'}</div>
