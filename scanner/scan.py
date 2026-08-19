@@ -862,6 +862,7 @@ def sync_positions():
 
     try:
         portfolio = t212_request("/api/v0/equity/portfolio", api_key, api_secret, mode)
+        print("DEBUG_RAW_PORTFOLIO:", json.dumps(portfolio[:1]))  # TEMP — αφαιρείται μετά τον έλεγχο πεδίων
         time.sleep(1.5)  # όριο ρυθμού του T212 API
         cash = t212_request("/api/v0/equity/account/cash", api_key, api_secret, mode)
     except HTTPError as e:
