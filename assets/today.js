@@ -29,7 +29,10 @@ window.Today = (function () {
       const pct = (inv && pnl != null) ? pnl / inv * 100 : null;
       const col = (pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
       return `<div class="tl-panel">
-        <div class="lbl">💼 Χαρτοφυλάκιο <i style="color:var(--muted);font-weight:400;text-transform:none;">· live sync Trading212</i></div>
+        <div class="lbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>💼 Χαρτοφυλάκιο <i style="color:var(--muted);font-weight:400;text-transform:none;">· live sync Trading212</i></span>
+          <button class="t212-refresh-btn" style="text-transform:none;" onclick="refreshT212Live(this)">🔄 Ανανέωση</button>
+        </div>
         <div class="tdy-pf-row">
           <div><span class="tdy-lbl">Επενδεδυμένο</span><b class="num">${inv != null ? '€' + inv.toFixed(2) : '—'}</b></div>
           <div><span class="tdy-lbl">P&amp;L</span><b class="num" style="color:${col}">${pnl != null ? pfEuro(pnl) : '—'}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}</b></div>
