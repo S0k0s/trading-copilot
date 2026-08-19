@@ -758,6 +758,68 @@ def scan_news(entries=None, delay=None):
 
 
 # ---------------------------------------------------------------------------
+# Ιστορικό επιδόσεων ("Ιστορικό Επιδόσεων" tab) — καθημερινό snapshot των
+# Top-5 Long-Term / Top-5 Swing που δείχνει το tab "Σήμερα", ώστε αργότερα
+# να συγκρίνουμε τι πρότεινε πραγματικά η εφαρμογή με το τι έγινε στην
+# πράξη (win rate, μέση απόδοση, σύγκριση με SPY ως proxy του S&P 500).
+# Append-only: κάθε scan προσθέτει ΤΟ ΠΟΛΥ ένα snapshot/ημέρα.
+# ---------------------------------------------------------------------------
+
+PICKS_HISTORY_JSON = ROOT / "picks_history.json"
+MAX_SNAPSHOTS = 180  # ~6 μήνες καθημερινών snapshots πριν κόψουμε τα παλιά
+
+
+def fetch_benchmark_price():
+    """Τρέχουσα τιμή SPY (ETF που ακολουθεί τον S&P 500) ως σημείο αναφοράς."""
+    req = Request("https://stockanalysis.com/etf/spy/", headers=HEADERS)
+    with _urlopen(req) as resp:
+        html = resp.read().decode("utf-8", errors="ignore")
+    text_blob = re.sub(r"<[^>]+>", "\n", html)
+    m = re.search(r"\n([\d,]+\.\d{2,4})\n", "\n" + text_blob)
+    return to_number(m.group(1)) if m else None
+
+
+def snapshot_picks(results):
+    history = {"snapshots": []}
+    if PICKS_HISTORY_JSON.exists():
+        try:
+            history = json.loads(PICKS_HISTORY_JSON.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    if any(s.get("date") == today for s in history.get("snapshots", [])):
+        print(f"Ήδη υπάρχει snapshot picks για {today} — παραλείπω.")
+        return
+
+    try:
+        spy_price = fetch_benchmark_price()
+    except Exception as e:
+        print(f"  ! Αποτυχία τιμής SPY ({e}) — snapshot χωρίς benchmark.")
+        spy_price = None
+
+    def top5(score_key):
+        ranked = sorted(
+            (r for r in results if r.get(score_key) is not None and r.get("price") is not None),
+            key=lambda r: r[score_key], reverse=True,
+        )[:5]
+        return [{"ticker": r["ticker"], "market": r.get("market"), "price": r["price"]} for r in ranked]
+
+    snapshot = {
+        "date": today,
+        "spy_price": spy_price,
+        "long_term_top5": top5("long_term_score"),
+        "swing_top5": top5("swing_score"),
+    }
+    history.setdefault("snapshots", []).append(snapshot)
+    history["snapshots"] = history["snapshots"][-MAX_SNAPSHOTS:]
+
+    PICKS_HISTORY_JSON.write_text(json.dumps(history, ensure_ascii=False, indent=None), encoding="utf-8")
+    print(f"Snapshot picks {today}: {len(snapshot['long_term_top5'])} LT + "
+          f"{len(snapshot['swing_top5'])} Swing (SPY={spy_price}) -> {PICKS_HISTORY_JSON}")
+
+
+# ---------------------------------------------------------------------------
 # Trading212 — αυτόματο sync θέσεων (προαιρετικό)
 #
 # Χρειάζεται το env var T212_API_KEY (API key από Trading212 → Settings → API).
@@ -837,6 +899,13 @@ def main():
     if "--positions-only" in sys.argv:
         sync_positions()
         return
+    if "--snapshot-only" in sys.argv:
+        if not DATA_JSON.exists():
+            print("Δεν υπάρχει ακόμα data.json — τρέξε πρώτα πλήρες scan.", file=sys.stderr)
+            sys.exit(1)
+        results = json.loads(DATA_JSON.read_text(encoding="utf-8")).get("stocks", [])
+        snapshot_picks(results)
+        return
 
     entries = resolve_all_markets()
     by_market = {}
@@ -885,6 +954,12 @@ def main():
         scan_news(entries)
     except Exception as e:
         print(f"! Το news scan απέτυχε συνολικά ({e}) — το data.json γράφτηκε κανονικά.")
+
+    # Ιστορικό επιδόσεων: καταγραφή σημερινού Top-5 LT/Swing (ανθεκτικό)
+    try:
+        snapshot_picks(results)
+    except Exception as e:
+        print(f"! Το snapshot picks απέτυχε ({e}) — τα υπόλοιπα δεδομένα γράφτηκαν κανονικά.")
 
     # Sync θέσεων Trading212 (no-op χωρίς T212_API_KEY)
     try:

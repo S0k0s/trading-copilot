@@ -276,6 +276,12 @@
   .rank-tk{min-width:52px;}
   .rank-name{flex:1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .rank-score{font-weight:700;min-width:42px;text-align:right;}
+  .perf-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px;}
+  .perf-stat-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .perf-stat-card .lbl{margin-bottom:6px;}
+  .perf-stat-card .lbl i{color:var(--muted);font-weight:400;font-style:normal;text-transform:none;}
+  .perf-big{font-size:22px;font-weight:800;}
+  .perf-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 
   .ev-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
   .ev-chip{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;
@@ -443,6 +449,7 @@
   <div id="trendlab" style="display:none;"></div>
   <div id="events" style="display:none;"></div>
   <div id="strategies" style="display:none;"></div>
+  <div id="performance" style="display:none;"></div>
   <div id="markets" style="display:none;"></div>
   <div id="cards" class="cards"></div>
   <div id="table-wrap" style="display:none;overflow-x:auto;">
@@ -500,12 +507,13 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=10"></script>
-<script src="assets/trendlab.js?v=10"></script>
-<script src="assets/markets.js?v=10"></script>
-<script src="assets/events.js?v=10"></script>
-<script src="assets/strategies.js?v=10"></script>
-<script src="assets/today.js?v=10"></script>
+<script src="assets/analysis.js?v=11"></script>
+<script src="assets/trendlab.js?v=11"></script>
+<script src="assets/markets.js?v=11"></script>
+<script src="assets/events.js?v=11"></script>
+<script src="assets/strategies.js?v=11"></script>
+<script src="assets/today.js?v=11"></script>
+<script src="assets/performance.js?v=11"></script>
 <script>
 let DATA = [];
 
@@ -866,12 +874,13 @@ let sortKey = 'long_term_score', sortDir = -1;
 const STANDALONE_TABS = ['today','markets'];
 const GROUPS = {
   scanner:   { tabs: ['long','swing','suggestions','all'] },
-  analysis:  { tabs: ['trend','events','strategies'] },
+  analysis:  { tabs: ['trend','events','strategies','performance'] },
   portfolio: { tabs: ['positions','journal'] },
 };
 const TAB_LABELS = {
   long: '🏛️ Long-Term Top 10', swing: '⚡ Swing Top 10', suggestions: '🔍 Προτάσεις', all: '📋 Όλες οι μετοχές',
   trend: '📊 Τάσεις &amp; Πρόβλεψη', events: '🗓️ Event Patterns', strategies: '🧭 Στρατηγικές',
+  performance: '📈 Επιδόσεις',
   positions: '💼 Οι Θέσεις Μου', journal: '📓 Journal',
 };
 const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets' };
@@ -962,11 +971,11 @@ function renderTable(list){
 function applyTab(tab, list){
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  ['today','positions','suggestions','journal','trendlab','events','strategies','markets']
+  ['today','positions','suggestions','journal','trendlab','events','strategies','performance','markets']
     .forEach(id=>document.getElementById(id).style.display = 'none');
   document.getElementById('cards').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'none';
-  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','markets'];
+  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','performance','markets'];
   document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
   document.getElementById('filter-bar').style.display = noSearch.includes(tab) ? 'none' : 'flex';
   if(tab==='today'){
@@ -996,6 +1005,10 @@ function applyTab(tab, list){
   else if(tab==='strategies'){
     document.getElementById('strategies').style.display = 'block';
     window.Strategies && Strategies.render();
+  }
+  else if(tab==='performance'){
+    document.getElementById('performance').style.display = 'block';
+    window.Performance && Performance.render();
   }
   else if(tab==='markets'){
     document.getElementById('markets').style.display = 'block';
