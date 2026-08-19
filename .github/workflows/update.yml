@@ -25,15 +25,24 @@ jobs:
         run: pip install -r scanner/requirements.txt
 
       - name: Run scanner
+        env:
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          T212_MODE: ${{ secrets.T212_MODE || 'demo' }}
+          # 9 αγορές, ~1100+ tickers (V6) — 0.6s αντί για το default 1.2s ώστε το nightly
+          # run να μη διαρκεί ώρες· δοκιμασμένο αξιόπιστο σε τοπικά runs στο 0.5s.
+          SCAN_SLEEP: '0.6'
         run: python scanner/scan.py
 
       - name: Commit & push αν άλλαξε κάτι
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json
+          git add data.json news.json
+          [ -f positions.json ] && git add positions.json
+          [ -f picks_history.json ] && git add picks_history.json
           if git diff --staged --quiet; then
-            echo "Καμία αλλαγή στο data.json."
+            echo "Καμία αλλαγή σε data.json/news.json/positions.json."
           else
             git commit -m "Auto-update stock data $(date -u +%Y-%m-%d)"
             git push

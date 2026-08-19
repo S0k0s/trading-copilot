@@ -17,6 +17,7 @@ AT&T στις ΗΠΑ αλλά Telus στον Καναδά) και να παρα�
 Σχεδιασμένο να είναι ανθεκτικό: αν αποτύχει η ανάκτηση/parsing για μια μετοχή,
 κρατάει τα προηγούμενα γνωστά δεδομένα της αντί να ρίξει όλο το script.
 """
+import base64
 import json
 import os
 import re
@@ -822,7 +823,8 @@ def snapshot_picks(results):
 # ---------------------------------------------------------------------------
 # Trading212 — αυτόματο sync θέσεων (προαιρετικό)
 #
-# Χρειάζεται το env var T212_API_KEY (API key από Trading212 → Settings → API).
+# Χρειάζεται τα env vars T212_API_KEY + T212_API_SECRET (ζευγάρι από Trading212
+# → Settings → API — Basic Auth: base64("KEY:SECRET"), όχι πια μονό token).
 # Προαιρετικά T212_MODE=demo|live (default: demo, δηλ. practice λογαριασμός).
 # Στο GitHub Actions τα δίνουμε ως repository secrets — ΠΟΤΕ hardcoded εδώ.
 # Χωρίς key, το sync απλά παραλείπεται και το site δείχνει τα χειροκίνητα
@@ -832,9 +834,11 @@ def snapshot_picks(results):
 POSITIONS_JSON = ROOT / "positions.json"
 
 
-def t212_request(path, api_key, mode):
+def t212_request(path, api_key, api_secret, mode):
     base = "https://demo.trading212.com" if mode == "demo" else "https://live.trading212.com"
-    req = Request(base + path, headers={"Authorization": api_key})
+    # Το Trading212 API χρησιμοποιεί HTTP Basic Auth: base64("API_KEY:API_SECRET").
+    creds = base64.b64encode(f"{api_key}:{api_secret}".encode()).decode()
+    req = Request(base + path, headers={"Authorization": f"Basic {creds}"})
     with _urlopen(req) as resp:
         return json.loads(resp.read())
 
@@ -850,15 +854,16 @@ def t212_plain_ticker(t):
 def sync_positions():
     import os
     api_key = os.environ.get("T212_API_KEY", "").strip()
+    api_secret = os.environ.get("T212_API_SECRET", "").strip()
     mode = (os.environ.get("T212_MODE", "demo").strip() or "demo").lower()
-    if not api_key:
-        print("Χωρίς T212_API_KEY — παραλείπω το sync θέσεων (fallback στα χειροκίνητα POSITIONS).")
+    if not api_key or not api_secret:
+        print("Χωρίς T212_API_KEY/T212_API_SECRET — παραλείπω το sync θέσεων (fallback στα χειροκίνητα POSITIONS).")
         return False
 
     try:
-        portfolio = t212_request("/api/v0/equity/portfolio", api_key, mode)
+        portfolio = t212_request("/api/v0/equity/portfolio", api_key, api_secret, mode)
         time.sleep(1.5)  # όριο ρυθμού του T212 API
-        cash = t212_request("/api/v0/equity/account/cash", api_key, mode)
+        cash = t212_request("/api/v0/equity/account/cash", api_key, api_secret, mode)
     except HTTPError as e:
         print(f"! Trading212 API: HTTP {e.code} — {'λάθος/ληγμένο key;' if e.code in (401, 403) else 'σφάλμα'} "
               f"Δεν γράφω positions.json.", file=sys.stderr)

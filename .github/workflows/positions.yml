@@ -1,0 +1,50 @@
+name: Sync θέσεων Trading212
+
+on:
+  schedule:
+    # Κάθε 2 ώρες, 07:15–21:15 UTC, Δευ–Παρ (καλύπτει ευρωπαϊκή + αμερικανική συνεδρίαση)
+    - cron: '15 7-21/2 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync-positions:
+    runs-on: ubuntu-latest
+    steps:
+      # Αν δεν έχουν οριστεί τα secrets T212_API_KEY/T212_API_SECRET, το run τελειώνει αθόρυβα.
+      - name: Έλεγχος για API key
+        id: check
+        run: echo "has_key=${{ secrets.T212_API_KEY != '' && secrets.T212_API_SECRET != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.check.outputs.has_key == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: steps.check.outputs.has_key == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Sync θέσεων
+        if: steps.check.outputs.has_key == 'true'
+        env:
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          T212_MODE: ${{ secrets.T212_MODE || 'demo' }}
+        run: python scanner/scan.py --positions-only
+
+      - name: Commit & push αν άλλαξε κάτι
+        if: steps.check.outputs.has_key == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          [ -f positions.json ] && git add positions.json
+          if git diff --staged --quiet; then
+            echo "Καμία αλλαγή στο positions.json."
+          else
+            git commit -m "Auto-sync θέσεων Trading212 $(date -u +%Y-%m-%dT%H:%M)"
+            git push
+          fi
