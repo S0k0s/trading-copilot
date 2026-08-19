@@ -161,11 +161,11 @@ window.Markets = (function () {
     const ranked = [...pool].sort((a, b) => b[scoreKey] - a[scoreKey]).slice(0, n);
     const rows = ranked.map((d, i) => `
       <div class="rank-row" onclick="openModal('${d.ticker}')">
-        <span class="rank-num">#${i + 1}</span>
-        <b class="rank-tk">${d.ticker}</b>
+        <span class="rank-num num">#${i + 1}</span>
+        <b class="rank-tk num">${d.ticker}</b>
         <span class="rank-name">${d.name || ''}</span>
         <span class="badge ${badgeClass(d.analyst_consensus)}">${d.analyst_consensus || '—'}</span>
-        <span class="rank-score" style="color:${scoreColor(d[scoreKey])}">${d[scoreKey]}</span>
+        <span class="rank-score num" style="color:${scoreColor(d[scoreKey])}">${d[scoreKey]}</span>
       </div>`).join('');
     const jumpTab = scoreKey === 'long_term_score' ? 'long' : 'swing';
     return `<div class="tl-panel">
@@ -218,7 +218,7 @@ window.Markets = (function () {
       return `<div class="mk-card${st.status === 'open' ? ' open' : ''}">
         <div class="mk-card-hd">
           <span class="mk-flag">${mkt.flag}</span>
-          <div><b>${mkt.name}</b><div class="mk-city">${mkt.city}${mkt.tz ? ' · ' + localTime : ''}</div></div>
+          <div><b>${mkt.name}</b><div class="mk-city">${mkt.city}${mkt.tz ? ' · <span class="num">' + localTime + '</span>' : ''}</div></div>
           <span class="mk-dot" style="background:${info.dot}"></span>
         </div>
         <div class="mk-status" style="color:${info.dot}">${info.label}</div>

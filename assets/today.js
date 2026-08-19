@@ -31,9 +31,9 @@ window.Today = (function () {
       return `<div class="tl-panel">
         <div class="lbl">💼 Χαρτοφυλάκιο <i style="color:var(--muted);font-weight:400;text-transform:none;">· live sync Trading212</i></div>
         <div class="tdy-pf-row">
-          <div><span class="tdy-lbl">Επενδεδυμένο</span><b>${inv != null ? '€' + inv.toFixed(2) : '—'}</b></div>
-          <div><span class="tdy-lbl">P&amp;L</span><b style="color:${col}">${pnl != null ? pfEuro(pnl) : '—'}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}</b></div>
-          <div><span class="tdy-lbl">Θέσεις</span><b>${t.positions.length}</b></div>
+          <div><span class="tdy-lbl">Επενδεδυμένο</span><b class="num">${inv != null ? '€' + inv.toFixed(2) : '—'}</b></div>
+          <div><span class="tdy-lbl">P&amp;L</span><b class="num" style="color:${col}">${pnl != null ? pfEuro(pnl) : '—'}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}</b></div>
+          <div><span class="tdy-lbl">Θέσεις</span><b class="num">${t.positions.length}</b></div>
         </div>
         <div class="tdy-link" onclick="selectTab('positions')">Δες αναλυτικά →</div>
       </div>`;
@@ -52,9 +52,9 @@ window.Today = (function () {
       return `<div class="tl-panel">
         <div class="lbl">💼 Χαρτοφυλάκιο</div>
         <div class="tdy-pf-row">
-          <div><span class="tdy-lbl">Επενδεδυμένο</span><b>€${totalInvested.toFixed(2)}</b></div>
-          <div><span class="tdy-lbl">P&amp;L</span><b style="color:${col}">${pfEuro(pnl)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</b></div>
-          <div><span class="tdy-lbl">Θέσεις</span><b>${POS.length}</b></div>
+          <div><span class="tdy-lbl">Επενδεδυμένο</span><b class="num">€${totalInvested.toFixed(2)}</b></div>
+          <div><span class="tdy-lbl">P&amp;L</span><b class="num" style="color:${col}">${pfEuro(pnl)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</b></div>
+          <div><span class="tdy-lbl">Θέσεις</span><b class="num">${POS.length}</b></div>
         </div>
         <div class="tdy-link" onclick="selectTab('positions')">Δες αναλυτικά →</div>
       </div>`;
@@ -90,10 +90,14 @@ window.Today = (function () {
 
   /* ---------------- Κορυφαίες επιλογές σήμερα (Top 5 Long-Term / Swing) --- */
 
-  function pickCard(d, reasonFn) {
+  function pickCard(d, reasonFn, scoreKey) {
     const q = d.quest_pass === 5 ? ' <span class="quest-badge" style="margin-left:4px;">🎯5/5</span>' : '';
+    const score = d[scoreKey];
+    const scoreCol = score >= 70 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
+    const flag = (typeof marketFlag === 'function') ? marketFlag(d.market) + ' ' : '';
     return `<div class="pick-card" onclick="openModal('${d.ticker}')">
-      <div class="pick-hd"><b>${d.ticker}</b>${q}<span class="pick-name">${d.name || ''}</span></div>
+      <div class="pick-hd">${flag}<b class="num">${d.ticker}</b>${q}<span class="pick-name">${d.name || ''}</span>
+        <span class="num pick-score" style="color:${scoreCol}">${score != null ? score.toFixed(1) : '—'}</span></div>
       <div class="pick-reason">${reasonFn(d)}</div>
     </div>`;
   }
@@ -111,11 +115,11 @@ window.Today = (function () {
       <div class="picks-cols">
         <div>
           <div class="picks-subhd">🏛️ Long-Term (top 5)</div>
-          ${lt.map(d => pickCard(d, window.longTermReason)).join('')}
+          ${lt.map(d => pickCard(d, window.longTermReason, 'long_term_score')).join('')}
         </div>
         <div>
           <div class="picks-subhd">⚡ Swing (top 5)</div>
-          ${sw.map(d => pickCard(d, window.swingReason)).join('')}
+          ${sw.map(d => pickCard(d, window.swingReason, 'swing_score')).join('')}
         </div>
       </div>
       <div class="tl-factor-txt" style="margin-top:8px;">Αυτόματη κατάταξη βάσει δημόσιων δεδομένων και του
@@ -155,7 +159,7 @@ window.Today = (function () {
     const chip = (d) => d === 0 ? 'ΣΗΜΕΡΑ' : d === 1 ? 'αύριο' : `σε ${d} μέρες`;
     const list = rows.slice(0, 8).map(r => `
       <div class="earn-row" onclick="openModal('${r.tk}')">
-        <b>${r.tk}</b><span class="earn-name">${r.name}</span>
+        <b class="num">${r.tk}</b><span class="earn-name">${r.name}</span>
         ${r.mine ? '<span class="earn-chip mine">💼 θέση</span>' : ''}
         <span class="earn-chip ${r.days <= 1 ? 'hot' : 'soon'}">${chip(r.days)}</span>
       </div>`).join('');
@@ -181,7 +185,7 @@ window.Today = (function () {
     }
     const cards = full.slice(0, 8).map(d => `
       <div class="tdy-quest-card" onclick="openModal('${d.ticker}')">
-        <b>${d.ticker}</b><span>${d.name || ''}</span>
+        <b class="num">${d.ticker}</b><span>${d.name || ''}</span>
       </div>`).join('');
     return `<div class="tl-panel">
       <div class="lbl">🎯 Quest 5/5 — περνούν όλο το φίλτρο ποιότητας (${full.length} από ${data.length})</div>
