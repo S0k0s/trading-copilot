@@ -455,34 +455,7 @@
   </div>
 
   <footer>
-    <h3>Μεθοδολογία (V1)</h3>
-    <p><b>Long-Term Score</b> (0-100): μέσος όρος 6 υπο-δεικτών — Piotroski F-Score (ποιότητα), Altman Z-Score
-    (χρηματοοικονομική ασφάλεια), ROE (κερδοφορία), PEG ratio (αποτίμηση σε σχέση με ανάπτυξη), Debt/Equity
-    (μόχλευση), προβλεπόμενη ανάπτυξη EPS 3ετίας. Ευνοεί ώριμες, ποιοτικές, λογικά αποτιμημένες εταιρείες.</p>
-    <p><b>Swing Score</b> (0-100): μέσος όρος 4 υπο-δεικτών — τάση τιμής vs. 50/200-day moving averages, RSI(14)
-    (ζώνη-στόχος 45-65), momentum 52 εβδομάδων, beta (μεταβλητότητα = ευκαιρία). Ευνοεί μετοχές σε ανοδική τάση με
-    υγιές momentum, κατάλληλες για βραχυπρόθεσμο timing — <u>όχι</u> προβλέψεις τιμής.</p>
-    <p><b>Νέο σε V2:</b> tab "Οι Θέσεις Μου" με τις πραγματικές demo θέσεις (Trading212 Invest/Practice) και live
-    candlestick charts (TradingView) σε κάθε μετοχή — πάτα πάνω σε οποιαδήποτε κάρτα/γραμμή για να δεις το chart μαζί
-    με τους δείκτες.</p>
-    <p><b>Νέο σε V4:</b> (1) <b>Τάσεις &amp; Πρόβλεψη</b> — custom chart με αυτόματο κανάλι στήριξης/αντίστασης,
-    στατιστική προβολή 20 συνεδριάσεων και σύνθετη εκτίμηση τάσης που συνδυάζει κλίση τάσης, δομή ΜΑ, RSI, θέση στο
-    κανάλι και sentiment ειδήσεων (news.json, ανανεώνεται αυτόματα)· (2) <b>Event Patterns</b> — μέση ιστορική πορεία
-    της μετοχής ±21 συνεδριάσεις γύρω από μεγάλες παρουσιάσεις προϊόντων (Apple/Tesla/NVIDIA/Meta/Alphabet/Microsoft/AMD),
-    με win rates και δυνατότητα δικών σου events· (3) <b>Στρατηγικές</b> — σύγκριση στρατηγικών με mini backtest σε
-    πραγματικό ιστορικό και υπολογιστή μεγέθους θέσης βάσει ρίσκου· (4) <b>Αγορές</b> — ώρες συνεδρίασης 11
-    χρηματιστηρίων παγκοσμίως με live status και 24ωρο timeline στην ώρα σου· (5) <b>αυτόματο sync θέσεων</b> από το
-    Trading212 API (θέσεις, μέση τιμή, P&amp;L, μετρητά — μέσω GitHub Action κάθε 2 ώρες, χρειάζεται το secret
-    T212_API_KEY)· (6) <b>ημερολόγιο earnings</b> στο tab «Αγορές &amp; Earnings» με τις επόμενες ανακοινώσεις
-    αποτελεσμάτων όλου του universe, και προειδοποιητικά badges «Earnings σε Χ μέρες» στις θέσεις σου και στο
-    Trend Lab. Ιστορικά τιμών: stockanalysis.com API (client-side, με τοπικό cache 6 ωρών).</p>
-    <p><b>🎯 Quest — 5 ερωτήσεις ποιότητας (προσωπικό φίλτρο):</b> (1) έσοδα +10%+/χρόνο (YoY),
-    (2) P/E &lt; 25, (3) PEG &lt; 2, (4) μ.ο. ROE 5ετίας &gt; 5%, (5) quick ratio &gt; 1.5. Αν μια μετοχή
-    περνάει και τις 5, σημαίνεται με 🎯 5/5 και «αξίζει βαθύτερο ψάξιμο» — είναι φίλτρο πρώτης
-    διαλογής, όχι σήμα αγοράς. Εμφανίζεται σε κάθε modal μετοχής, ως στήλη στο «Όλες οι μετοχές»
-    (ταξινομήσιμη) και ως badge στα Top 10.</p>
-    <p><b>Δεν περιλαμβάνεται ακόμα (roadmap):</b> ευρύτερο universe (mid/small caps), sector-relative ranking,
-    ειδοποιήσεις (alerts) μέσω Telegram, αυτόματο journal από τα trades του Trading212.</p>
+    <p style="color:var(--dim,var(--muted));font-size:12px;">Investment Copilot · δεδομένα από stockanalysis.com</p>
   </footer>
 </div>
 
@@ -491,25 +464,19 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=12"></script>
-<script src="assets/trendlab.js?v=12"></script>
-<script src="assets/markets.js?v=12"></script>
-<script src="assets/events.js?v=12"></script>
-<script src="assets/strategies.js?v=12"></script>
-<script src="assets/today.js?v=12"></script>
-<script src="assets/performance.js?v=12"></script>
+<script src="assets/analysis.js?v=13"></script>
+<script src="assets/trendlab.js?v=13"></script>
+<script src="assets/markets.js?v=13"></script>
+<script src="assets/events.js?v=13"></script>
+<script src="assets/strategies.js?v=13"></script>
+<script src="assets/today.js?v=13"></script>
+<script src="assets/performance.js?v=13"></script>
 <script>
 let DATA = [];
 
-// Οι δικές μου θέσεις (demo/practice, Trading212 Invest) — ενημέρωσε manually όποτε ανοίγεις/κλείνεις θέση
-const POSITIONS = [
-  {ticker:"MU", strategy:"Long-Term · Quality Compounding", invested:499.25, estPrice:822.99, estShares:0.69311665,
-   stop:null, stopNote:"Δεν έχει οριστεί ακόμα σταθερό stop — long-term θέση, επανεξέταση περιοδικά.",
-   date:"17/07/2026", status:"Εκτελέστηκε — πραγματική τιμή γεμίσματος: $822.99 (€720.30/μετοχή)"},
-  {ticker:"INTC", strategy:"Swing · Quality Pullback", invested:199.66, estPrice:92.14, estShares:2.47641871,
-   stop:87.70, stopNote:"Stop-loss ≈ -6% από την τιμή εισόδου.",
-   date:"17/07/2026", status:"Εκτελέστηκε — πραγματική τιμή γεμίσματος: $92.14 (€80.64/μετοχή)"}
-];
+// Χειροκίνητες θέσεις — σκόπιμα κενό. Μόλις οριστεί το T212_API_KEY (GitHub secret),
+// το live sync (positions.json) αναλαμβάνει αυτόματα και δείχνει τις πραγματικές θέσεις.
+const POSITIONS = [];
 window.POSITIONS = POSITIONS;
 
 // Επίθημα δικού μας ticker (π.χ. ".L") -> πρόθεμα exchange για TradingView (π.χ. "LSE:").
@@ -692,7 +659,8 @@ function renderPositions(){
     return;
   }
   if(POSITIONS.length===0){
-    wrap.innerHTML = `<div class="pos-empty">Δεν έχεις καταγεγραμμένες θέσεις ακόμα.</div>`;
+    wrap.innerHTML = `<div class="pos-empty">Καμία θέση να δείξω ακόμα — πρόσθεσε το T212_API_KEY (GitHub secret)
+      για να ενεργοποιηθεί το αυτόματο sync από το Trading212.</div>`;
     return;
   }
   const cardsHtml = POSITIONS.map(p=>{

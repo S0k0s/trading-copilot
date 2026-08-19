@@ -60,7 +60,8 @@ window.Today = (function () {
       </div>`;
     }
     return `<div class="tl-panel"><div class="lbl">💼 Χαρτοφυλάκιο</div>
-      <div class="tl-factor-txt">Δεν έχεις καταγεγραμμένες θέσεις ακόμα.</div></div>`;
+      <div class="tl-factor-txt">Ενεργοποίησε το αυτόματο sync από το Trading212 (T212_API_KEY) για να δεις εδώ
+      το χαρτοφυλάκιό σου.</div></div>`;
   }
 
   /* ---------------- Αγορές (mini) ----------------------------------------- */
