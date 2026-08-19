@@ -25,6 +25,7 @@ window.TrendLab = (function () {
     if (state.initialized) return;
     const wrap = document.getElementById('trendlab');
     wrap.innerHTML = `
+      <div id="tl-back"></div>
       <div class="tl-toolbar">
         <select id="tl-ticker" class="tl-select" title="Μετοχή"></select>
         <div class="tl-ranges">
@@ -340,8 +341,18 @@ window.TrendLab = (function () {
 
   /* ------------------------------- API ----------------------------------- */
 
+  function renderBackLink() {
+    const el = document.getElementById('tl-back');
+    if (!el) return;
+    const prev = (typeof previousTab !== 'undefined') ? previousTab : null;
+    if (!prev || prev === 'trend') { el.innerHTML = ''; return; }
+    const label = (typeof tabDisplayName === 'function') ? tabDisplayName(prev) : prev;
+    el.innerHTML = `<div class="tl-back-link" onclick="selectTab('${prev}')">← Πίσω στο ${label}</div>`;
+  }
+
   function render(preferredTicker) {
     ensureSkeleton();
+    renderBackLink();
     fillTickerSelect();
     const t = preferredTicker || state.ticker ||
       (window.POSITIONS && window.POSITIONS[0] && window.POSITIONS[0].ticker) || 'AAPL';

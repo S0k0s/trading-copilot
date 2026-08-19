@@ -316,7 +316,7 @@ window.Markets = (function () {
     const list = rows.map(r => {
       const hd = r.date !== lastDate ? `<div class="earn-date">${fmtGrDate(r.date)}</div>` : '';
       lastDate = r.date;
-      return hd + `<div class="earn-row" onclick="openTrendLab('${r.tk}')">
+      return hd + `<div class="earn-row" onclick="openModal('${r.tk}')">
         <b>${r.tk}</b><span class="earn-name">${r.name}</span>
         ${r.mine ? '<span class="earn-chip mine">💼 έχεις θέση</span>' : ''}
         ${chip(r.days)}

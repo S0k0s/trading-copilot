@@ -191,6 +191,8 @@
 
   /* --- V4: Trend Lab, Αγορές, Events, Στρατηγικές --- */
   .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .tl-back-link{display:inline-block;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:12px;}
+  .tl-back-link:hover{text-decoration:underline;}
   .tl-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
   .tl-select{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:9px 12px;
     border-radius:8px;font-size:14px;min-width:220px;}
@@ -498,12 +500,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=9"></script>
-<script src="assets/trendlab.js?v=9"></script>
-<script src="assets/markets.js?v=9"></script>
-<script src="assets/events.js?v=9"></script>
-<script src="assets/strategies.js?v=9"></script>
-<script src="assets/today.js?v=9"></script>
+<script src="assets/analysis.js?v=10"></script>
+<script src="assets/trendlab.js?v=10"></script>
+<script src="assets/markets.js?v=10"></script>
+<script src="assets/events.js?v=10"></script>
+<script src="assets/strategies.js?v=10"></script>
+<script src="assets/today.js?v=10"></script>
 <script>
 let DATA = [];
 
@@ -856,6 +858,7 @@ window.swingReason = swingReason;
 
 let currentTab = 'today';
 let currentGroup = 'today';
+let previousTab = null;
 let sortKey = 'long_term_score', sortDir = -1;
 
 // --- V5: ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
@@ -871,6 +874,10 @@ const TAB_LABELS = {
   trend: '📊 Τάσεις &amp; Πρόβλεψη', events: '🗓️ Event Patterns', strategies: '🧭 Στρατηγικές',
   positions: '💼 Οι Θέσεις Μου', journal: '📓 Journal',
 };
+const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets' };
+function tabDisplayName(tab){
+  return (STANDALONE_LABELS[tab] || TAB_LABELS[tab] || tab || '').replace(/&amp;/g,'&');
+}
 const lastTabByGroup = {};
 
 function tabToGroup(tab){
@@ -889,6 +896,7 @@ function renderSubtabs(group){
 }
 
 function selectTab(tab){
+  if(tab !== currentTab) previousTab = currentTab;
   const targetGroup = tabToGroup(tab);
   lastTabByGroup[targetGroup] = tab;
   if(targetGroup !== currentGroup){

@@ -92,7 +92,7 @@ window.Today = (function () {
 
   function pickCard(d, reasonFn) {
     const q = d.quest_pass === 5 ? ' <span class="quest-badge" style="margin-left:4px;">🎯5/5</span>' : '';
-    return `<div class="pick-card" onclick="openTrendLab('${d.ticker}')">
+    return `<div class="pick-card" onclick="openModal('${d.ticker}')">
       <div class="pick-hd"><b>${d.ticker}</b>${q}<span class="pick-name">${d.name || ''}</span></div>
       <div class="pick-reason">${reasonFn(d)}</div>
     </div>`;
@@ -154,7 +154,7 @@ window.Today = (function () {
     }
     const chip = (d) => d === 0 ? 'ΣΗΜΕΡΑ' : d === 1 ? 'αύριο' : `σε ${d} μέρες`;
     const list = rows.slice(0, 8).map(r => `
-      <div class="earn-row" onclick="openTrendLab('${r.tk}')">
+      <div class="earn-row" onclick="openModal('${r.tk}')">
         <b>${r.tk}</b><span class="earn-name">${r.name}</span>
         ${r.mine ? '<span class="earn-chip mine">💼 θέση</span>' : ''}
         <span class="earn-chip ${r.days <= 1 ? 'hot' : 'soon'}">${chip(r.days)}</span>
@@ -180,7 +180,7 @@ window.Today = (function () {
         <div class="tl-factor-txt">Καμία μετοχή του universe δεν περνάει σήμερα και τις 5 ερωτήσεις — φυσιολογικό, το φίλτρο είναι αυστηρό.</div></div>`;
     }
     const cards = full.slice(0, 8).map(d => `
-      <div class="tdy-quest-card" onclick="openTrendLab('${d.ticker}')">
+      <div class="tdy-quest-card" onclick="openModal('${d.ticker}')">
         <b>${d.ticker}</b><span>${d.name || ''}</span>
       </div>`).join('');
     return `<div class="tl-panel">
