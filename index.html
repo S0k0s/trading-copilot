@@ -148,6 +148,10 @@
   .pos-stats{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;}
   .pos-stats div span{display:block;color:var(--muted);font-size:11px;}
   .pos-empty{color:var(--muted);font-size:14px;padding:30px 10px;text-align:center;}
+  .t212-refresh-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .t212-refresh-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .t212-refresh-btn:disabled{opacity:.6;cursor:default;}
 
   /* --- V3: beginner help panel, legend, suggestions --- */
   .help{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden;}
@@ -653,6 +657,26 @@ function renderLiveSummary(t){
   </div>`;
 }
 
+const T212_PROXY_URL = 'https://t212-portfolio-proxy.sokratispoun.workers.dev/';
+
+async function refreshT212Live(btn){
+  const orig = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Ανανέωση...'; }
+  try{
+    const resp = await fetch(T212_PROXY_URL, { cache: 'no-store' });
+    const data = await resp.json();
+    if(!resp.ok || data.error) throw new Error(data.error || ('HTTP '+resp.status));
+    window.T212 = data;
+    renderPositions();
+    window.Today && Today.render();
+  }catch(e){
+    if(btn){
+      btn.textContent = '⚠️ Αποτυχία';
+      setTimeout(()=>{ btn.disabled = false; btn.textContent = orig; }, 2500);
+    }
+  }
+}
+
 function renderLivePositions(wrap){
   const t = window.T212;
   const manualByTicker = {};
@@ -682,8 +706,10 @@ function renderLivePositions(wrap){
       <div class="note">${p.since?`Άνοιξε ${p.since} · `:''}${m?m.stopNote+' · ':''}Συγχρονισμένο αυτόματα από Trading212.</div>
     </div>`;
   }).join('');
-  const syncNote = `<div class="cat-desc">🔄 Αυτόματο sync από Trading212 (${t.mode==='demo'?'practice/demo':'live'}) ·
-    τελευταίο: ${formatUpdated(t.last_updated)}</div>`;
+  const syncNote = `<div class="cat-desc" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span>🔄 Αυτόματο sync από Trading212 (${t.mode==='demo'?'practice/demo':'live'}) ·
+    τελευταίο: ${formatUpdated(t.last_updated)}${t.live?' · ζωντανή τιμή':''}</span>
+    <button class="t212-refresh-btn" onclick="refreshT212Live(this)">🔄 Ανανέωση τώρα</button></div>`;
   wrap.innerHTML = syncNote + renderLiveSummary(t) + `<div id="portfolio-risk"></div><div class="positions">${cards}</div>`;
   wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
   window.PortfolioRisk && PortfolioRisk.render('portfolio-risk');
@@ -697,7 +723,8 @@ function renderPositions(){
   }
   if(POSITIONS.length===0){
     wrap.innerHTML = `<div class="pos-empty">Καμία θέση να δείξω ακόμα — πρόσθεσε το T212_API_KEY (GitHub secret)
-      για να ενεργοποιηθεί το αυτόματο sync από το Trading212.</div>`;
+      για να ενεργοποιηθεί το αυτόματο sync από το Trading212.
+      <div style="margin-top:12px;"><button class="t212-refresh-btn" onclick="refreshT212Live(this)">🔄 Έλεγξε τώρα</button></div></div>`;
     return;
   }
   const cardsHtml = POSITIONS.map(p=>{
