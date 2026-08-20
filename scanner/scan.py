@@ -496,7 +496,20 @@ def score_from(row):
     return long_term_score, swing_score
 
 
-def scan_ticker(entry, previous):
+def entry_from_row(row):
+    """Ανακατασκευάζει ένα 'entry' (όπως του resolve_all_markets) από μια ήδη
+    αποθηκευμένη γραμμή του data.json — για το ελαφρύ intraday rescan που δεν
+    ξαναφέρνει τις λίστες αγορών."""
+    market = row.get("market") or "us"
+    meta = MARKET_META.get(market, MARKET_META["us"])
+    suffix = meta["suffix"]
+    ticker = row["ticker"]
+    raw = ticker[:-len(suffix)] if suffix and ticker.endswith(suffix) else ticker
+    return {"ticker": ticker, "raw": raw, "name": row.get("name"), "market": market,
+            "exchange_code": meta["exchange_code"]}
+
+
+def scan_ticker(entry, previous, light=False):
     ticker = entry["ticker"]
     raw = entry["raw"]
     name = entry["name"]
@@ -535,22 +548,29 @@ def scan_ticker(entry, previous):
         "market_cap": tbl.get("Market Cap"),
     }
 
-    # ROE μ.ο. 5ετίας (για το quest checklist) — δεύτερο request, ανεκτικό σε αποτυχία
-    time.sleep(SCAN_SLEEP * 0.6)
-    try:
-        row["roe_5y_avg"] = fetch_roe_5y_avg(raw, exchange_code)
-    except Exception as e:
-        print(f"  ! {ticker}: αποτυχία ROE 5Y ({e})")
+    if light:
+        # Ελαφριά (intraday) ανανέωση: sector/industry/ROE-5y δεν αλλάζουν μέσα
+        # στην ημέρα — τα κρατάμε από το τελευταίο πλήρες scan, χωρίς νέο request.
         row["roe_5y_avg"] = previous.get("roe_5y_avg") if previous else None
-
-    # Sector/Industry (για φίλτρα στο "Όλες οι μετοχές") — τρίτο request, ανεκτικό σε αποτυχία
-    time.sleep(SCAN_SLEEP * 0.6)
-    try:
-        row["sector"], row["industry"] = fetch_sector_industry(raw, exchange_code)
-    except Exception as e:
-        print(f"  ! {ticker}: αποτυχία sector/industry ({e})")
         row["sector"] = previous.get("sector") if previous else None
         row["industry"] = previous.get("industry") if previous else None
+    else:
+        # ROE μ.ο. 5ετίας (για το quest checklist) — δεύτερο request, ανεκτικό σε αποτυχία
+        time.sleep(SCAN_SLEEP * 0.6)
+        try:
+            row["roe_5y_avg"] = fetch_roe_5y_avg(raw, exchange_code)
+        except Exception as e:
+            print(f"  ! {ticker}: αποτυχία ROE 5Y ({e})")
+            row["roe_5y_avg"] = previous.get("roe_5y_avg") if previous else None
+
+        # Sector/Industry (για φίλτρα στο "Όλες οι μετοχές") — τρίτο request, ανεκτικό σε αποτυχία
+        time.sleep(SCAN_SLEEP * 0.6)
+        try:
+            row["sector"], row["industry"] = fetch_sector_industry(raw, exchange_code)
+        except Exception as e:
+            print(f"  ! {ticker}: αποτυχία sector/industry ({e})")
+            row["sector"] = previous.get("sector") if previous else None
+            row["industry"] = previous.get("industry") if previous else None
 
     # Fallback τιμής: Market Cap / Shares Outstanding, αν δεν βρέθηκε απευθείας τιμή.
     if row["price"] is None:
@@ -897,12 +917,59 @@ def sync_positions():
     return True
 
 
+# ---------------------------------------------------------------------------
+# Ελαφρύ intraday rescan τιμών: ξαναδιαβάζει το ήδη υπάρχον data.json και
+# ανανεώνει μόνο ό,τι έρχεται σε ΕΝΑ request/μετοχή (τιμή, RSI, MA, scores) —
+# όχι sector/ROE-5y που χρειάζονται ξεχωριστά requests και δεν αλλάζουν μέσα
+# στην ημέρα. Σκοπός: να «νιώθει» ζωντανό το dashboard τις ώρες αγοράς, χωρίς
+# να χρειάζεται το πλήρες (πολύ πιο αργό) βραδινό scan.
+# ---------------------------------------------------------------------------
+
+def scan_prices_light():
+    if not DATA_JSON.exists():
+        print("Δεν υπάρχει ακόμα data.json — τρέξε πρώτα πλήρες scan.", file=sys.stderr)
+        sys.exit(1)
+
+    old = json.loads(DATA_JSON.read_text(encoding="utf-8"))
+    previous_stocks = old.get("stocks", [])
+    print(f"Ελαφρύ rescan τιμών: {len(previous_stocks)} μετοχές (από το τελευταίο πλήρες scan).")
+
+    results = []
+    failures = 0
+    for i, prev in enumerate(previous_stocks, 1):
+        entry = entry_from_row(prev)
+        print(f"[{i}/{len(previous_stocks)}] {entry['ticker']}")
+        try:
+            row = scan_ticker(entry, prev, light=True)
+        except Exception as e:
+            print(f"  ! {entry['ticker']}: απροσδόκητο σφάλμα ({e})")
+            row = prev
+            failures += 1
+        if row:
+            results.append(row)
+        time.sleep(SCAN_SLEEP)
+
+    if not results:
+        print("Καμία μετοχή δεν ανακτήθηκε επιτυχώς — δεν γράφω data.json.", file=sys.stderr)
+        sys.exit(1)
+
+    out = {
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "stocks": results,
+    }
+    DATA_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=None), encoding="utf-8")
+    print(f"\nΈγραψα {len(results)} μετοχές (ελαφρύ rescan) στο {DATA_JSON} ({failures} απέτυχαν πλήρως).")
+
+
 def main():
     if "--news-only" in sys.argv:
         scan_news()
         return
     if "--positions-only" in sys.argv:
         sync_positions()
+        return
+    if "--prices-only" in sys.argv:
+        scan_prices_light()
         return
     if "--snapshot-only" in sys.argv:
         if not DATA_JSON.exists():
