@@ -32,7 +32,7 @@ window.Today = (function () {
         const pnlPct = (p.avg_price && p.current_price) ? (p.current_price - p.avg_price) / p.avg_price * 100 : null;
         const pcol = (pnlPct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
         return `<div class="tdy-pf-pos-row" onclick="openModal('${p.ticker}')">
-          <div class="tdy-pf-pos-tk"><b class="num">${p.ticker}</b><span class="tdy-pf-pos-entry">είσοδος $${p.avg_price != null ? p.avg_price.toFixed(2) : '—'}</span></div>
+          <div class="tdy-pf-pos-tk"><b class="num">${p.ticker}</b><span class="tdy-pf-pos-entry">είσοδος $${p.avg_price != null ? p.avg_price.toFixed(2) : '—'}</span><span class="pos-verdict" data-ticker="${p.ticker}" style="font-size:10px;padding:2px 8px;"></span></div>
           <div class="tdy-pf-pos-right">
             <span class="num" style="color:${pcol}">${pnlPct != null ? (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%' : '—'}</span>
             <b class="num">${p.valueEur != null ? '€' + p.valueEur.toFixed(2) : '—'}</b>
@@ -227,6 +227,7 @@ window.Today = (function () {
       ${questSection()}
     `;
     window.Analysis && Analysis.fillSparklines(wrap, '.pick-spark');
+    window.Analysis && Analysis.fillPositionVerdicts(wrap, '.pos-verdict');
   }
 
   return { render };

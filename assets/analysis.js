@@ -504,11 +504,46 @@ window.Analysis = (function () {
     });
   }
 
+  /* ------------- Πρόταση θέσης (μονολεκτική, από το ίδιο μοντέλο predictTrend) --- */
+
+  const VERDICT_WORD = {
+    bullish: { text: 'Κράτα', color: 'var(--green)' },
+    neutral: { text: 'Παρακολούθα', color: 'var(--yellow)' },
+    bearish: { text: 'Πρόσεξε', color: 'var(--red)' },
+  };
+
+  /**
+   * Γεμίζει async elements `selector` με data-ticker με μια μονολεκτική
+   * πρόταση (Κράτα/Παρακολούθα/Πρόσεξε), βασισμένη στο ίδιο deterministic
+   * predictTrend() που ήδη χρησιμοποιεί το Trend Lab (τάση + RSI + MA +
+   * κανάλι + sentiment ειδήσεων) — καμία επιπλέον AI/λογική. Δεν είναι
+   * σύσταση αγοράς/πώλησης, μόνο ένδειξη τάσης· hover για τη βεβαιότητα.
+   */
+  function fillPositionVerdicts(root, selector) {
+    const holders = (root || document).querySelectorAll(selector || '.pos-verdict');
+    holders.forEach(async (el) => {
+      const ticker = el.dataset.ticker;
+      if (!ticker) return;
+      try {
+        const bars = await fetchHistory(ticker, '2Y');
+        if (!bars || bars.length < 30) return;
+        const news = window.NEWS && window.NEWS.tickers && window.NEWS.tickers[ticker];
+        const pred = predictTrend(bars, news ? news.score : null);
+        const v = VERDICT_WORD[pred.verdict];
+        if (!v) return;
+        el.textContent = v.text;
+        el.style.color = v.color;
+        el.style.borderColor = v.color;
+        el.title = `${pred.confidence}% βεβαιότητα — τάση, RSI, MA, κανάλι & ειδήσεις (όχι σύσταση)`;
+      } catch (e) { /* σιωπηλά — προαιρετική ένδειξη */ }
+    });
+  }
+
   return {
     fetchHistory, sma, rsi, atr, linreg,
     findPivots, detectChannel, projection, predictTrend,
     btBuyHold, btMaTrend, btPullback,
     setupCanvas, niceTicks, clamp, earningsInfo, questChecklist,
-    sparklineSVG, fillSparklines,
+    sparklineSVG, fillSparklines, fillPositionVerdicts,
   };
 })();

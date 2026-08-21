@@ -145,6 +145,8 @@
   .pos-hd .nm{color:var(--muted);font-size:13px;}
   .pos-strategy{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(79,140,255,.15);color:var(--accent);
     font-weight:700;display:inline-block;margin-top:4px;}
+  .pos-verdict{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);
+    font-weight:700;display:inline-block;margin-top:4px;margin-left:6px;}
   .pos-stats{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;}
   .pos-stats div span{display:block;color:var(--muted);font-size:11px;}
   .pos-empty{color:var(--muted);font-size:14px;padding:30px 10px;text-align:center;}
@@ -510,12 +512,12 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=14"></script>
+<script src="assets/analysis.js?v=15"></script>
 <script src="assets/trendlab.js?v=14"></script>
 <script src="assets/markets.js?v=14"></script>
 <script src="assets/events.js?v=14"></script>
 <script src="assets/strategies.js?v=14"></script>
-<script src="assets/today.js?v=17"></script>
+<script src="assets/today.js?v=18"></script>
 <script src="assets/performance.js?v=14"></script>
 <script src="assets/risk.js?v=14"></script>
 <script>
@@ -717,7 +719,7 @@ function renderLivePositions(wrap){
       <div class="pos-hd">
         <div>
           <div class="tk">${p.ticker} <span style="font-size:13px;color:var(--muted);font-weight:400;">${d.name||''}</span></div>
-          ${m?`<div class="pos-strategy">${m.strategy}</div>`:''}${earnBadge(p.ticker)}
+          ${m?`<div class="pos-strategy">${m.strategy}</div>`:''}<span class="pos-verdict" data-ticker="${p.ticker}"></span>${earnBadge(p.ticker)}
         </div>
         <div class="pos-stats">
           <div><span>Μετοχές</span>${p.quantity!=null?p.quantity:'—'}</div>
@@ -740,6 +742,7 @@ function renderLivePositions(wrap){
   wrap.innerHTML = syncNote + renderLiveSummary(t) + `<div id="portfolio-risk"></div><div class="positions">${cards}</div>`;
   wrap.querySelectorAll('.chart-holder').forEach(el=> mountChart(el, el.dataset.ticker));
   window.PortfolioRisk && PortfolioRisk.render('portfolio-risk');
+  window.Analysis && Analysis.fillPositionVerdicts(wrap, '.pos-verdict');
 }
 
 function renderPositions(){
