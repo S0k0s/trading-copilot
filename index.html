@@ -433,6 +433,7 @@
     <span>Universe: <b id="universe-count">—</b></span>
     <span>Πηγή δεδομένων: <b>stockanalysis.com (S&amp;P Global)</b></span>
     <span>Τελευταία ενημέρωση: <b id="updated-date">φόρτωση…</b></span>
+    <button class="t212-refresh-btn" onclick="refreshAllData(this)">🔄 Ανανέωση δεδομένων</button>
   </div>
   <div id="load-error" class="disclaimer" style="display:none;background:#2a1414;border-color:#5c2a2a;color:#f0b8b8;"></div>
 
@@ -1335,6 +1336,41 @@ fetch('data.json?_=' + Date.now())
   });
 
 applyTab('today', DATA);
+
+// Ανανέωση όλων των δεδομένων (data/news/positions) χωρίς reload σελίδας —
+// ξαναφέρνει ό,τι θα έφερνε ένα κλείσιμο/άνοιγμα, στην τρέχουσα καρτέλα.
+async function refreshAllData(btn){
+  const orig = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Ανανέωση...'; }
+  try{
+    const [dataRes, newsRes, posRes] = await Promise.all([
+      fetch('data.json?_=' + Date.now()),
+      fetch('news.json?_=' + Date.now()).catch(()=>null),
+      fetch('positions.json?_=' + Date.now()).catch(()=>null),
+    ]);
+    if(!dataRes.ok) throw new Error('HTTP '+dataRes.status);
+    const dataJson = await dataRes.json();
+    DATA = dataJson.stocks || [];
+    window.DATA = DATA;
+    document.getElementById('updated-date').textContent = formatUpdated(dataJson.last_updated);
+    document.getElementById('universe-count').textContent = DATA.length + ' μετοχές';
+
+    if(newsRes && newsRes.ok) window.NEWS = await newsRes.json();
+    if(posRes && posRes.ok) window.T212 = await posRes.json();
+
+    computeQuestPass();
+    populateSectorFilter();
+    refresh();
+    window.Today && Today.render();
+  }catch(e){
+    if(btn){
+      btn.textContent = '⚠️ Αποτυχία';
+      setTimeout(()=>{ btn.disabled = false; btn.textContent = orig; }, 2500);
+    }
+    return;
+  }
+  if(btn){ btn.disabled = false; btn.textContent = orig; }
+}
 </script>
 </body>
 </html>
