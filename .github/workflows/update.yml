@@ -43,7 +43,26 @@ jobs:
           [ -f picks_history.json ] && git add picks_history.json
           if git diff --staged --quiet; then
             echo "Καμία αλλαγή σε data.json/news.json/positions.json."
-          else
-            git commit -m "Auto-update stock data $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "Auto-update stock data $(date -u +%Y-%m-%d)"
+          # Retry με rebase σε περίπτωση race condition με άλλο workflow (π.χ. το
+          # ελαφρύ intraday rescan) που έκανε push στο μεταξύ — τα data.json κ.λπ.
+          # είναι μονογραμμικά JSON, οπότε σε σύγκρουση κρατάμε το δικό μας
+          # (πιο πρόσφατο/πλήρες recompute) πάνω από το φρέσκο origin/main.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "Έγινε push."
+              exit 0
+            fi
+            echo "Push απορρίφθηκε (προσπάθεια $i) — συγχρονισμός με origin/main..."
+            git fetch origin main
+            git reset --soft origin/main
+            git add data.json news.json
+            [ -f positions.json ] && git add positions.json
+            [ -f picks_history.json ] && git add picks_history.json
+            git commit -m "Auto-update stock data $(date -u +%Y-%m-%d)"
+            sleep $((RANDOM % 10 + 5))
+          done
+          echo "Απέτυχε το push μετά από επαναλήψεις." >&2
+          exit 1

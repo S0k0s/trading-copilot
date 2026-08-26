@@ -44,7 +44,22 @@ jobs:
           [ -f positions.json ] && git add positions.json
           if git diff --staged --quiet; then
             echo "Καμία αλλαγή στο positions.json."
-          else
-            git commit -m "Auto-sync θέσεων Trading212 $(date -u +%Y-%m-%dT%H:%M)"
-            git push
+            exit 0
           fi
+          git commit -m "Auto-sync θέσεων Trading212 $(date -u +%Y-%m-%dT%H:%M)"
+          # Retry σε περίπτωση race condition με τα άλλα workflows — ασφαλές
+          # εδώ γιατί κανένα άλλο workflow δεν αγγίζει το positions.json.
+          for i in 1 2 3; do
+            if git push; then
+              echo "Έγινε push."
+              exit 0
+            fi
+            echo "Push απορρίφθηκε (προσπάθεια $i) — συγχρονισμός με origin/main..."
+            git fetch origin main
+            git reset --soft origin/main
+            [ -f positions.json ] && git add positions.json
+            git commit -m "Auto-sync θέσεων Trading212 $(date -u +%Y-%m-%dT%H:%M)"
+            sleep $((RANDOM % 6 + 3))
+          done
+          echo "Απέτυχε το push μετά από επαναλήψεις." >&2
+          exit 1

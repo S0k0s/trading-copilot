@@ -39,7 +39,15 @@ jobs:
           git add data.json
           if git diff --staged --quiet; then
             echo "Καμία αλλαγή στο data.json."
+            exit 0
+          fi
+          git commit -m "Ελαφρύ rescan τιμών $(date -u +%Y-%m-%dT%H:%M)"
+          # Αν το push απορριφθεί, μάλλον έτρεξε ταυτόχρονα το πλήρες βραδινό
+          # scan (πιο πλήρη δεδομένα — sector/ROE-5y) και πρόλαβε να κάνει push
+          # πρώτο. Δεν ξαναπροσπαθούμε/επικαλύπτουμε εδώ· απλά παραλείπουμε —
+          # ο επόμενος κύκλος (σε 2 ώρες) θα ξαναπροσπαθήσει κανονικά.
+          if git push; then
+            echo "Έγινε push."
           else
-            git commit -m "Ελαφρύ rescan τιμών $(date -u +%Y-%m-%dT%H:%M)"
-            git push
+            echo "Push απορρίφθηκε — μάλλον έτρεξε ταυτόχρονα πληρέστερο scan. Παραλείπω αυτόν τον κύκλο."
           fi
