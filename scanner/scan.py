@@ -61,6 +61,10 @@ TICKERS = {
     "ISRG": "Intuitive Surgical", "VRTX": "Vertex Pharmaceuticals", "SCHW": "Charles Schwab",
     "CMCSA": "Comcast", "T": "AT&T", "CB": "Chubb", "SYK": "Stryker",
     "PYPL": "PayPal", "INTU": "Intuit",
+    # Πρόσφατα spin-offs — ήδη δημόσιες μετοχές, όχι ακόμα στον επίσημο S&P 500
+    # index (οπότε δεν έρχονται από το fetch_universe()). Το resolve_universe()
+    # τις κρατάει έτσι κι αλλιώς μέσω merged.setdefault().
+    "SOLS": "Solstice Advanced Materials",
 }
 
 # ---------------------------------------------------------------------------
