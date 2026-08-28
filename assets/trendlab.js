@@ -14,6 +14,7 @@ window.TrendLab = (function () {
     loading: false,
     error: null,
     initialized: false,
+    reqId: 0,              // μετρητής αιτημάτων — απορρίπτει απαντήσεις από ξεπερασμένα (race) fetches
   };
 
   const RANGE_BARS = { '3M': 64, '6M': 128, '1Y': 252, '2Y': 5000 };
@@ -75,17 +76,26 @@ window.TrendLab = (function () {
   /* ------------------------------- Δεδομένα ------------------------------ */
 
   async function setTicker(ticker, force) {
+    // Μετρητής αιτήματος: αν ξεκινήσει νεότερο setTicker() πριν απαντήσει αυτό
+    // (π.χ. race μεταξύ selectTab('trend') και openTrendLab(ticker), που καλούν
+    // TrendLab.render() σχεδόν ταυτόχρονα με διαφορετικό ticker), η απάντηση
+    // αυτού εδώ αγνοείται — αλλιώς όποιο fetch απαντήσει τελευταίο "νικάει"
+    // ανεξάρτητα από ticker, και το γράφημα δείχνει λάθος μετοχή.
+    const myReq = ++state.reqId;
     state.ticker = ticker;
     const sel = document.getElementById('tl-ticker');
     if (sel && sel.value !== ticker) sel.value = ticker;
     state.loading = true; state.error = null; state.bars2y = null;
     showMsg('Φόρτωση ιστορικού για ' + ticker + '…');
     try {
-      state.bars2y = await A.fetchHistory(ticker, '2Y', force);
+      const bars = await A.fetchHistory(ticker, '2Y', force);
+      if (myReq !== state.reqId) return; // ξεπερασμένο αίτημα — αγνόησε
+      state.bars2y = bars;
       state.loading = false;
       hideMsg();
       renderChartAndPanels();
     } catch (e) {
+      if (myReq !== state.reqId) return; // ξεπερασμένο αίτημα — αγνόησε
       state.loading = false;
       state.error = e;
       const isIntl = /\.[A-Z]{1,3}$/.test(ticker); // π.χ. AZN.L, SAP.DE — μη-αμερικανική μετοχή
