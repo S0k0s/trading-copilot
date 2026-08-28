@@ -46,13 +46,24 @@ window.Analysis = (function () {
     } catch (e) { /* γεμάτο localStorage — δεν πειράζει, απλά χωρίς cache */ }
   }
 
+  /** Καθαρίζει όλο το cache ιστορικού (καλείται από το γενικό κουμπί ανανέωσης). */
+  function clearHistoryCache() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(CACHE_PREFIX)) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  }
+
   /**
    * Φέρνει ημερήσιο ιστορικό OHLCV, παλιό → νέο.
    * range: '6M' | '1Y' | '2Y' | '5Y' | '10Y'
+   * force: αγνόησε το cache (φρέσκο fetch)
    * Επιστρέφει [{t:'YYYY-MM-DD', o,h,l,c,v}]
    */
-  async function fetchHistory(ticker, range) {
-    const cached = readCache(ticker, range);
+  async function fetchHistory(ticker, range, force) {
+    const cached = force ? null : readCache(ticker, range);
     if (cached) return cached;
     const tryUrls = [
       API_BASE + encodeURIComponent(ticker) + '/history?range=' + range + '&period=Daily',
@@ -540,7 +551,7 @@ window.Analysis = (function () {
   }
 
   return {
-    fetchHistory, sma, rsi, atr, linreg,
+    fetchHistory, clearHistoryCache, sma, rsi, atr, linreg,
     findPivots, detectChannel, projection, predictTrend,
     btBuyHold, btMaTrend, btPullback,
     setupCanvas, niceTicks, clamp, earningsInfo, questChecklist,

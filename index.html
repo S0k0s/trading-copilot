@@ -513,8 +513,8 @@
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
-<script src="assets/analysis.js?v=15"></script>
-<script src="assets/trendlab.js?v=14"></script>
+<script src="assets/analysis.js?v=16"></script>
+<script src="assets/trendlab.js?v=15"></script>
 <script src="assets/markets.js?v=14"></script>
 <script src="assets/events.js?v=14"></script>
 <script src="assets/strategies.js?v=14"></script>
@@ -1358,10 +1358,13 @@ async function refreshAllData(btn){
     if(newsRes && newsRes.ok) window.NEWS = await newsRes.json();
     if(posRes && posRes.ok) window.T212 = await posRes.json();
 
+    window.Analysis && Analysis.clearHistoryCache();
+
     computeQuestPass();
     populateSectorFilter();
     refresh();
     window.Today && Today.render();
+    if(currentTab === 'trend' && window.TrendLab) TrendLab.refresh();
   }catch(e){
     if(btn){
       btn.textContent = '⚠️ Αποτυχία';

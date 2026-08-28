@@ -74,14 +74,14 @@ window.TrendLab = (function () {
 
   /* ------------------------------- Δεδομένα ------------------------------ */
 
-  async function setTicker(ticker) {
+  async function setTicker(ticker, force) {
     state.ticker = ticker;
     const sel = document.getElementById('tl-ticker');
     if (sel && sel.value !== ticker) sel.value = ticker;
     state.loading = true; state.error = null; state.bars2y = null;
     showMsg('Φόρτωση ιστορικού για ' + ticker + '…');
     try {
-      state.bars2y = await A.fetchHistory(ticker, '2Y');
+      state.bars2y = await A.fetchHistory(ticker, '2Y', force);
       state.loading = false;
       hideMsg();
       renderChartAndPanels();
@@ -360,7 +360,12 @@ window.TrendLab = (function () {
     else renderChartAndPanels();
   }
 
-  return { render };
+  /** Αναγκάζει φρέσκο fetch (αγνοώντας cache) για το τρέχον ticker — καλείται από το γενικό κουμπί ανανέωσης. */
+  function refresh() {
+    if (state.ticker) setTicker(state.ticker, true);
+  }
+
+  return { render, refresh };
 })();
 
 /* Άνοιγμα του Trend Lab από οπουδήποτε (π.χ. κουμπί στο modal μετοχής) */
