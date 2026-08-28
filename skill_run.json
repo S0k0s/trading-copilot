@@ -1,0 +1,75 @@
+{
+  "last_run": "2026-08-28T14:20:00Z",
+  "horizon": "5-10 συνεδριάσεις",
+  "market_context": "S&P 500 έκλεισε στις 7.720 (+0.57%) την Πέμπτη 27/8, με την τεχνολογία να ηγείται μετά τα αποτελέσματα της Nvidia. Futures ελαφρώς αρνητικά σήμερα ενόψει της ομιλίας του προέδρου της Fed στο Jackson Hole — αυξημένος κίνδυνος μεταβλητότητας γύρω από αυτό το γεγονός. Η ευρύτερη τάση παραμένει ανοδική.",
+  "risk_note": "Αυτό είναι μια αρχική λίστα για περαιτέρω δική σου έρευνα, όχι σύσταση αγοράς. Πρότεινε μέγεθος θέσης ώστε ένα stop-out να ρισκάρει μόνο ένα μικρό, καθορισμένο ποσοστό του κεφαλαίου σου (συχνά αναφέρεται εύρος 1-2% ανά συναλλαγή, αλλά είναι δική σου απόφαση). Οι 3 μετοχές παρακάτω έκαναν ήδη τεράστιο one-day gap μετά τα αποτελέσματα (20-28% σε 1 μέρα) — δεν είναι το κλασικό «ήσυχο breakout», είναι πιο επιθετικό/ασταθές setup, με αντίστοιχα φαρδύτερα stops. Δεν είναι επενδυτική συμβουλή· δεν είμαι αδειοδοτημένος σύμβουλος.",
+  "picks": [
+    {
+      "ticker": "VEEV",
+      "name": "Veeva Systems",
+      "setup": "Earnings gap-and-go — το πιο συγκρατημένο ρίσκο από τα 3, με καθαρό στόχο στο προηγούμενο υψηλό 52 εβδομάδων",
+      "catalyst": "Q2 FY27: έσοδα $928εκ (+18% YoY, πάνω από consensus $904-905εκ), EPS $2.35 έναντι εκτίμησης ~$2.22. Αύξηση ετήσιας πρόβλεψης. Καταλύτης: momentum στο Vault CRM + πρώιμη ζήτηση για το AI προϊόν Veeva Falcon. Πολλαπλοί οίκοι (Oppenheimer, Piper Sandler, Guggenheim, Stifel, Barclays, Truist) ανέβασαν price targets στα $295-300.",
+      "price_at_scan": 282.13,
+      "entry_low": 278,
+      "entry_high": 285,
+      "stop": 273,
+      "stop_note": "κάτω από το χαμηλό της ημέρας του gap (27/8: $274.81)",
+      "target": 310,
+      "target_note": "προηγούμενο υψηλό 52 εβδομάδων (7/10/2025) — πραγματική αντίσταση",
+      "risk_pct": 3.2,
+      "reward_risk": "~3:1",
+      "invalidation": "Κλείσιμο κάτω από $273 ακυρώνει το setup (γέμισμα του gap).",
+      "avg_volume_20d": 1953193,
+      "scan_day_volume": 6392733,
+      "sources": [
+        {"t": "Why Veeva Systems Stock Skyrocketed Today", "src": "The Motley Fool", "u": "https://www.fool.com/investing/2026/08/27/why-veeva-systems-stock-skyrocketed-today/"},
+        {"t": "Veeva Systems (VEEV) Moved Up by 16.48% on Aug 27", "src": "TradingKey", "u": "https://www.tradingkey.com/news/market-movers/262136672-market-movers-veev-20260827"}
+      ]
+    },
+    {
+      "ticker": "CRWD",
+      "name": "CrowdStrike Holdings",
+      "setup": "Earnings gap σε νέο υψηλό 52 εβδομάδων, τεράστιος όγκος (2.7x μέσου όρου) — φαρδύ stop λόγω μεγέθους gap",
+      "catalyst": "Q2 FY27: EPS $0.31 έναντι εκτίμησης $0.29, έσοδα $1.47δισ έναντι consensus $1.44δισ. Αύξηση ετήσιας πρόβλεψης (EPS $1.25-1.26, έσοδα $5.99-6.01δισ). Καταλύτης: ζήτηση ασφάλειας λόγω απειλών από AI agents — 11 οίκοι ανέβασαν price targets μετά τα αποτελέσματα.",
+      "price_at_scan": 227.96,
+      "entry_low": 220,
+      "entry_high": 228,
+      "stop": 206,
+      "stop_note": "κάτω από το χαμηλό της ημέρας του gap (27/8: $206.10)",
+      "target": 250,
+      "target_note": "εκτίμηση/στρογγυλός αριθμός — δεν υπάρχει ιστορική αντίσταση από πάνω (νέο all-time high), χρησιμοποίησε trailing stop",
+      "risk_pct": 9.6,
+      "reward_risk": "~1:1",
+      "invalidation": "Κλείσιμο κάτω από $206 ακυρώνει το setup.",
+      "avg_volume_20d": 8622216,
+      "scan_day_volume": 23324778,
+      "sources": [
+        {"t": "CrowdStrike Stock's Best Day Ever: 11 Analysts Raise Targets", "src": "Benzinga", "u": "https://www.benzinga.com/analyst-stock-ratings/price-target/26/08/61472513/crowdstrike-stock-best-day-ever-analyst-price-targets"},
+        {"t": "CrowdStrike Beats Annual Revenue Forecasts as AI Threats Rise", "src": "Bloomberg", "u": "https://www.bloomberg.com/news/articles/2026-08-26/crowdstrike-beats-annual-revenue-forecasts-as-ai-threats-rise"}
+      ]
+    },
+    {
+      "ticker": "OKTA",
+      "name": "Okta",
+      "setup": "Earnings gap σε νέο υψηλό 52 εβδομάδων, όγκος 4.8x του μέσου όρου — το πιο ακραίο gap των τριών, πολύ φαρδύ stop",
+      "catalyst": "Q2 FY27: EPS $1.05 έναντι εκτίμησης $0.97, έσοδα $805εκ (+11% YoY) έναντι εκτίμησης ~$794εκ. Αύξηση ετήσιας πρόβλεψης EPS ($3.90-3.94) και εσόδων ($3.22-3.23δισ). Καταλύτης: ζήτηση για AI-native identity security.",
+      "price_at_scan": 172.91,
+      "entry_low": 168,
+      "entry_high": 175,
+      "stop": 156,
+      "stop_note": "κάτω από το χαμηλό της ημέρας του gap (27/8: $156.50)",
+      "target": 190,
+      "target_note": "εκτίμηση/στρογγυλός αριθμός — δεν υπάρχει ιστορική αντίσταση από πάνω (νέο all-time high), χρησιμοποίησε trailing stop",
+      "risk_pct": 9.7,
+      "reward_risk": "~1:1",
+      "invalidation": "Κλείσιμο κάτω από $156 ακυρώνει το setup.",
+      "avg_volume_20d": 3413936,
+      "scan_day_volume": 16258514,
+      "sources": [
+        {"t": "Okta Stock Rallies After Q2 Earnings Beat Estimates", "src": "Benzinga", "u": "https://www.benzinga.com/markets/earnings/26/08/61448289/okta-stock-rallies-after-q2-earnings-beat-estimates"},
+        {"t": "CrowdStrike and Okta shares jump on second-quarter beats and raised outlooks", "src": "SiliconANGLE", "u": "https://siliconangle.com/2026/08/26/crowdstrike-and-okta-shares-jump-on-second-quarter-beats-and-raised-outlooks/"}
+      ]
+    }
+  ],
+  "excluded_note": "Η SNPS (+13.4% σήμερα, επίσης earnings beat + αναβάθμιση guidance) εξετάστηκε αλλά αφαιρέθηκε από τη λίστα — το χαμηλό της ημέρας του gap ($415) δίνει πολύ φαρδύ ρίσκο (~11%) χωρίς κοντινό, ρεαλιστικό στόχο αντίστασης εντός 5-10 συνεδριάσεων."
+}

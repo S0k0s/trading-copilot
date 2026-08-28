@@ -252,6 +252,37 @@
     padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;margin:4px 0 14px;}
   .tl-open-btn:hover{background:rgba(79,140,255,.28);}
 
+  .sr-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .sr-last-run{font-size:12.5px;color:var(--muted);}
+  .sr-loading{padding:40px 0;text-align:center;color:var(--muted);font-size:14px;}
+  .sr-empty{padding:20px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--panel);
+    border:1px solid var(--border);border-radius:12px;line-height:1.6;}
+  .sr-context{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;
+    font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px;}
+  .sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:14px;}
+  .sr-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);}
+  .sr-card-hd{display:flex;align-items:baseline;gap:10px;cursor:pointer;margin-bottom:4px;}
+  .sr-card-hd .tk{font-size:17px;font-weight:800;}
+  .sr-card-hd .nm{font-size:12.5px;color:var(--muted);}
+  .sr-setup{font-size:12.5px;color:var(--text);line-height:1.5;margin:8px 0 10px;}
+  .sr-catalyst{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:12px;}
+  .sr-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+  .sr-level{background:var(--panel2);border-radius:8px;padding:8px 10px;text-align:center;}
+  .sr-level .k{font-size:10.5px;color:var(--muted);display:block;margin-bottom:2px;}
+  .sr-level .v{font-size:14px;font-weight:700;}
+  .sr-level.entry .v{color:var(--accent);}
+  .sr-level.stop .v{color:var(--red);}
+  .sr-level.target .v{color:var(--green);}
+  .sr-rr{font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .sr-invalid{font-size:12px;color:var(--yellow);margin-bottom:10px;line-height:1.5;}
+  .sr-sources{display:flex;flex-wrap:wrap;gap:6px;}
+  .sr-sources a{font-size:11px;color:var(--accent);text-decoration:none;background:rgba(79,140,255,.1);
+    padding:3px 8px;border-radius:6px;}
+  .sr-sources a:hover{background:rgba(79,140,255,.22);}
+  .sr-excluded{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+  .sr-risk{font-size:12px;color:var(--yellow);line-height:1.55;background:rgba(232,197,71,.08);
+    border:1px solid rgba(232,197,71,.25);border-radius:10px;padding:10px 14px;}
+
   .mk-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .mk-now{font-size:13px;color:var(--muted);}
   .mk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;margin-top:14px;}
@@ -463,6 +494,10 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 7V5.5A1.5 1.5 0 019.5 4h5A1.5 1.5 0 0116 5.5V7" stroke="currentColor" stroke-width="2"/></svg>
       <span>Χαρτοφυλάκιο</span>
     </div>
+    <div class="nav-group" data-group="skillrun">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+      <span>Skill Run</span>
+    </div>
   </nav>
   <div class="subtabs" id="subtabs" style="display:none;"></div>
 
@@ -484,6 +519,7 @@
   <div id="strategies" style="display:none;"></div>
   <div id="performance" style="display:none;"></div>
   <div id="markets" style="display:none;"></div>
+  <div id="skillrun" style="display:none;"></div>
   <div id="cards" class="cards"></div>
   <div id="table-wrap" style="display:none;overflow-x:auto;">
     <table id="table">
@@ -521,6 +557,7 @@
 <script src="assets/today.js?v=18"></script>
 <script src="assets/performance.js?v=14"></script>
 <script src="assets/risk.js?v=14"></script>
+<script src="assets/skillrun.js?v=1"></script>
 <script>
 let DATA = [];
 
@@ -931,7 +968,7 @@ let sortKey = 'long_term_score', sortDir = -1;
 
 // --- V5: ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
 // «Σήμερα» και «Markets» είναι standalone — δεν έχουν subtabs, το group name == το tab name.
-const STANDALONE_TABS = ['today','markets'];
+const STANDALONE_TABS = ['today','markets','skillrun'];
 const GROUPS = {
   scanner:   { tabs: ['long','swing','suggestions','all'] },
   analysis:  { tabs: ['trend','events','strategies','performance'] },
@@ -943,7 +980,7 @@ const TAB_LABELS = {
   performance: '📈 Επιδόσεις',
   positions: '💼 Οι Θέσεις Μου', journal: '📓 Journal',
 };
-const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets' };
+const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets', skillrun: '🎯 Skill Run' };
 function tabDisplayName(tab){
   return (STANDALONE_LABELS[tab] || TAB_LABELS[tab] || tab || '').replace(/&amp;/g,'&');
 }
@@ -1033,11 +1070,11 @@ function renderTable(list){
 function applyTab(tab, list){
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  ['today','positions','suggestions','journal','trendlab','events','strategies','performance','markets']
+  ['today','positions','suggestions','journal','trendlab','events','strategies','performance','markets','skillrun']
     .forEach(id=>document.getElementById(id).style.display = 'none');
   document.getElementById('cards').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'none';
-  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','performance','markets'];
+  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','performance','markets','skillrun'];
   document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
   document.getElementById('filter-bar').style.display = noSearch.includes(tab) ? 'none' : 'flex';
   if(tab==='today'){
@@ -1075,6 +1112,10 @@ function applyTab(tab, list){
   else if(tab==='markets'){
     document.getElementById('markets').style.display = 'block';
     window.Markets && Markets.render();
+  }
+  else if(tab==='skillrun'){
+    document.getElementById('skillrun').style.display = 'block';
+    window.SkillRun && SkillRun.render();
   }
   else if(tab==='long') renderCards(list,'long_term_score');
   else if(tab==='swing') renderCards(list,'swing_score');
