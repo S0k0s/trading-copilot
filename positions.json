@@ -1,1 +1,1 @@
-{"last_updated": "2026-08-29T04:06:42Z", "mode": "live", "cash": {"free": 0, "total": 42.84, "invested": 44.0, "ppl": -1.16, "result": -12.19}, "positions": [{"ticker": "DDOG", "t212_ticker": "DDOG_US_EQ", "quantity": 0.20907363, "avg_price": 244.98546278, "current_price": 237.5, "ppl": -1.16, "fx_ppl": 0.19, "since": "2026-08-28"}]}
+{"last_updated": "2026-08-31T15:03:37Z", "mode": "live", "cash": {"free": 41.96, "total": 41.96, "invested": 0, "ppl": 0, "result": -14.17}, "positions": []}
