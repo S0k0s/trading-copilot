@@ -1,1 +1,1 @@
-{"last_updated": "2026-09-01T01:28:58Z", "mode": "live", "cash": {"free": 41.96, "total": 41.96, "invested": 0, "ppl": 0, "result": -14.17}, "positions": []}
+{"last_updated": "2026-09-01T12:33:22Z", "mode": "live", "cash": {"free": 0, "total": 42.38, "invested": 41.9, "ppl": 0.48, "result": -14.17}, "positions": [{"ticker": "ARNC", "t212_ticker": "ARNC_US_EQ", "quantity": 0.19693458, "avg_price": 246.78245943, "current_price": 249.5, "ppl": 0.48, "fx_ppl": 0.02, "since": "2026-09-01"}]}
