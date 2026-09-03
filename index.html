@@ -724,6 +724,52 @@ function t212EurValues(t){
 }
 
 const T212_PROXY_URL = 'https://t212-portfolio-proxy.sokratispoun.workers.dev/';
+const STOCK_LOOKUP_URL = 'https://stock-lookup-proxy.sokratispoun.workers.dev/';
+
+// Ζωντανό lookup για ticker εκτός universe (όχι S&P 500) — ίδια πεδία με το data.json,
+// χωρίς sector/industry/news/PEG price-target (αυτά έρχονται μόνο από το πλήρες nightly scan).
+async function liveLookupTicker(ticker){
+  const r = await fetch(STOCK_LOOKUP_URL + '?ticker=' + encodeURIComponent(ticker) + '&_=' + Date.now());
+  if(!r.ok){
+    const body = await r.json().catch(()=>({}));
+    throw new Error(body.error === 'ticker not found' ? 'Δεν βρέθηκε το ticker' : (body.detail || ('HTTP '+r.status)));
+  }
+  const raw = await r.json();
+  const scores = clientScoreFrom(raw);
+  return Object.assign({market: 'us'}, raw, scores);
+}
+
+// Ίδιος ακριβώς τύπος με scanner/scan.py::score_from() — για να δίνει το ίδιο Long-Term/Swing
+// Score σε ticker που δεν έχει περάσει από το πλήρες nightly scan (live lookup, εκτός universe).
+function clientScoreFrom(d){
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+  const parts = [];
+  if(d.piotroski_f != null) parts.push(clamp(d.piotroski_f/9*100, 0, 100));
+  if(d.altman_z != null){ const az = d.altman_z; parts.push(az>=3 ? 100 : az<1.8 ? 0 : (az-1.8)/1.2*100); }
+  if(d.roe != null) parts.push(clamp(d.roe, 0, 30)/30*100);
+  if(d.peg_ratio != null && d.peg_ratio > 0){ const pg = d.peg_ratio; parts.push(pg<=1 ? 100 : pg>=3 ? 0 : (3-pg)/2*100); }
+  if(d.debt_equity != null){ const de = d.debt_equity; parts.push(de<=0 ? 100 : de>=2 ? 0 : (2-de)/2*100); }
+  if(d.eps_growth_forecast_3y != null) parts.push(clamp(d.eps_growth_forecast_3y, 0, 50)/50*100);
+  const long_term_score = parts.length ? Math.round((parts.reduce((a,b)=>a+b,0)/parts.length)*10)/10 : null;
+
+  const sparts = [];
+  const {price, ma50, ma200} = d;
+  if(price!=null && ma50!=null && ma200!=null){
+    if(price>ma50 && ma50>ma200) sparts.push(100);
+    else if(price<ma50 && ma50<ma200) sparts.push(0);
+    else sparts.push(50);
+  }
+  if(d.rsi != null){
+    const rsi = d.rsi;
+    if(rsi>=45 && rsi<=65) sparts.push(100);
+    else { const edge = rsi<45 ? 45 : 65; sparts.push(clamp(100-Math.abs(rsi-edge)*4, 0, 100)); }
+  }
+  if(d.week52_change != null) sparts.push(clamp(d.week52_change, 0, 100));
+  if(d.beta != null) sparts.push(clamp(d.beta, 0, 3)/3*100);
+  const swing_score = sparts.length ? Math.round((sparts.reduce((a,b)=>a+b,0)/sparts.length)*10)/10 : null;
+
+  return {long_term_score, swing_score};
+}
 
 async function refreshT212Live(btn){
   const orig = btn ? btn.textContent : '';
@@ -1197,9 +1243,12 @@ document.querySelectorAll('thead th').forEach(th=>th.onclick=()=>{
 });
 
 // ---- Καθολική αναζήτηση: γράψε ticker/όνομα από οπουδήποτε -> ανοίγει ανάλυση τάσης ----
-function renderGSearchResults(items){
+const TICKER_LIKE = /^[A-Z0-9]{1,6}(\.[A-Z]{1,3})?$/;
+function renderGSearchResults(items, rawQuery){
   const el = document.getElementById('gsearch-results');
-  if(!items.length){
+  const q = (rawQuery||'').trim().toUpperCase();
+  const offerLive = !items.length && TICKER_LIKE.test(q);
+  if(!items.length && !offerLive){
     el.innerHTML = '<div class="gsearch-empty">Δεν βρέθηκε μετοχή στο universe.</div>';
     el.classList.add('show');
     return;
@@ -1208,10 +1257,18 @@ function renderGSearchResults(items){
     <div class="gsearch-item" data-ticker="${d.ticker}">
       <span class="tk">${marketFlag(d.market)} ${d.ticker}</span><span class="nm">${d.name||''}</span>
       ${d.quest_pass===5?'<span class="gq">🎯 5/5</span>':''}
-    </div>`).join('');
+    </div>`).join('')
+    + (offerLive ? `<div class="gsearch-item gsearch-live" data-ticker="${q}">
+        <span class="tk">⚡ ${q}</span><span class="nm">Δεν είναι στο universe — ζωντανή αναζήτηση</span>
+      </div>` : '');
   el.classList.add('show');
-  el.querySelectorAll('.gsearch-item').forEach(it=>it.onclick=()=>{
+  el.querySelectorAll('.gsearch-item:not(.gsearch-live)').forEach(it=>it.onclick=()=>{
     openTrendLab(it.dataset.ticker);
+    gsearchInput.value = '';
+    el.classList.remove('show');
+  });
+  el.querySelectorAll('.gsearch-live').forEach(it=>it.onclick=()=>{
+    openModal(it.dataset.ticker);
     gsearchInput.value = '';
     el.classList.remove('show');
   });
@@ -1224,7 +1281,7 @@ gsearchInput.addEventListener('input', ()=>{
   const matches = DATA
     .filter(d => d.ticker.toLowerCase().includes(q) || (d.name||'').toLowerCase().includes(q))
     .sort((a,b) => (a.ticker.toLowerCase().startsWith(q)?0:1) - (b.ticker.toLowerCase().startsWith(q)?0:1));
-  renderGSearchResults(matches);
+  renderGSearchResults(matches, q);
 });
 gsearchInput.addEventListener('keydown', (e)=>{
   if(e.key==='Enter'){
@@ -1232,6 +1289,7 @@ gsearchInput.addEventListener('keydown', (e)=>{
     if(!q) return;
     const hit = DATA.find(d=>d.ticker===q) || DATA.find(d=>d.ticker.startsWith(q));
     if(hit){ openTrendLab(hit.ticker); gsearchInput.value=''; document.getElementById('gsearch-results').classList.remove('show'); }
+    else if(TICKER_LIKE.test(q)){ openModal(q); gsearchInput.value=''; document.getElementById('gsearch-results').classList.remove('show'); }
   } else if(e.key==='Escape'){
     gsearchInput.blur();
     document.getElementById('gsearch-results').classList.remove('show');
@@ -1271,10 +1329,19 @@ function questBox(d){
   </div>`;
 }
 
-function openModal(ticker){
-  const d = DATA.find(x=>x.ticker===ticker);
-  if(!d) return;
+async function openModal(ticker){
+  let d = DATA.find(x=>x.ticker===ticker);
   const m = document.getElementById('modal');
+  if(!d){
+    m.innerHTML = `<span class="close" onclick="closeModal()">✕</span><div class="note">⏳ Ζωντανή αναζήτηση για ${ticker} (εκτός S&amp;P 500 universe)…</div>`;
+    document.getElementById('overlay').classList.add('show');
+    try{
+      d = await liveLookupTicker(ticker);
+    }catch(e){
+      m.innerHTML = `<span class="close" onclick="closeModal()">✕</span><div class="note">⚠️ Αποτυχία ζωντανής αναζήτησης για ${ticker}: ${e.message || e}</div>`;
+      return;
+    }
+  }
   m.innerHTML = `
     <span class="close" onclick="closeModal()">✕</span>
     <h2>${marketFlag(d.market)} ${d.ticker}</h2>
@@ -1318,6 +1385,7 @@ function openModal(ticker){
       <div><span>Price Target</span><b class="num">$${fmt(d.price_target)}</b></div>
     </div>
     ${d.note?`<div class="note">⚠️ ${d.note}</div>`:''}
+    ${d.live_lookup?`<div class="note">⚡ Ζωντανή αναζήτηση — το ${d.ticker} δεν είναι στο universe των 1078 μετοχών (S&amp;P 500 + λίγες εξαιρέσεις), οπότε δεν εμφανίζεται στις λίστες Top 10/Rankings. Τα scores υπολογίστηκαν τώρα client-side με τον ίδιο τύπο· λείπουν sector/industry, price target και ειδήσεις (αυτά έρχονται μόνο από το πλήρες nightly scan).</div>`:''}
     <div class="note">Πηγή: stockanalysis.com/stocks/${d.ticker.toLowerCase()}/statistics/</div>
   `;
   document.getElementById('overlay').classList.add('show');
