@@ -283,6 +283,16 @@
   .sr-risk{font-size:12px;color:var(--yellow);line-height:1.55;background:rgba(232,197,71,.08);
     border:1px solid rgba(232,197,71,.25);border-radius:10px;padding:10px 14px;}
 
+  #featured-picks{margin-bottom:20px;}
+  .sr-featured-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .sr-featured-hd .t{font-size:15px;font-weight:700;}
+  .sr-category{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    color:var(--accent);background:rgba(79,140,255,.12);padding:2px 8px;border-radius:6px;margin-bottom:6px;}
+  .sr-thesis{font-size:12.5px;color:var(--text);line-height:1.5;margin-bottom:10px;}
+  .sr-kv{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:4px;}
+  .sr-kv b{color:var(--text);font-weight:600;}
+  .sr-horizon{font-size:11.5px;color:var(--muted);font-style:italic;margin:8px 0;}
+
   .mk-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .mk-now{font-size:13px;color:var(--muted);}
   .mk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;margin-top:14px;}
@@ -494,10 +504,6 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 7V5.5A1.5 1.5 0 019.5 4h5A1.5 1.5 0 0116 5.5V7" stroke="currentColor" stroke-width="2"/></svg>
       <span>Χαρτοφυλάκιο</span>
     </div>
-    <div class="nav-group" data-group="skillrun">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
-      <span>Skill Run</span>
-    </div>
   </nav>
   <div class="subtabs" id="subtabs" style="display:none;"></div>
 
@@ -519,7 +525,7 @@
   <div id="strategies" style="display:none;"></div>
   <div id="performance" style="display:none;"></div>
   <div id="markets" style="display:none;"></div>
-  <div id="skillrun" style="display:none;"></div>
+  <div id="featured-picks" style="display:none;"></div>
   <div id="cards" class="cards"></div>
   <div id="table-wrap" style="display:none;overflow-x:auto;">
     <table id="table">
@@ -557,7 +563,7 @@
 <script src="assets/today.js?v=18"></script>
 <script src="assets/performance.js?v=14"></script>
 <script src="assets/risk.js?v=14"></script>
-<script src="assets/skillrun.js?v=1"></script>
+<script src="assets/skillpicks.js?v=1"></script>
 <script>
 let DATA = [];
 
@@ -1014,7 +1020,7 @@ let sortKey = 'long_term_score', sortDir = -1;
 
 // --- V5: ενότητες πλοήγησης (Σκάνερ/Ανάλυση/Χαρτοφυλάκιο ομαδοποιούν τα παλιά tabs) ---
 // «Σήμερα» και «Markets» είναι standalone — δεν έχουν subtabs, το group name == το tab name.
-const STANDALONE_TABS = ['today','markets','skillrun'];
+const STANDALONE_TABS = ['today','markets'];
 const GROUPS = {
   scanner:   { tabs: ['long','swing','suggestions','all'] },
   analysis:  { tabs: ['trend','events','strategies','performance'] },
@@ -1026,7 +1032,7 @@ const TAB_LABELS = {
   performance: '📈 Επιδόσεις',
   positions: '💼 Οι Θέσεις Μου', journal: '📓 Journal',
 };
-const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets', skillrun: '🎯 Skill Run' };
+const STANDALONE_LABELS = { today: '🏠 Σήμερα', markets: '🌍 Markets' };
 function tabDisplayName(tab){
   return (STANDALONE_LABELS[tab] || TAB_LABELS[tab] || tab || '').replace(/&amp;/g,'&');
 }
@@ -1116,11 +1122,13 @@ function renderTable(list){
 function applyTab(tab, list){
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  ['today','positions','suggestions','journal','trendlab','events','strategies','performance','markets','skillrun']
+  ['today','positions','suggestions','journal','trendlab','events','strategies','performance','markets']
     .forEach(id=>document.getElementById(id).style.display = 'none');
   document.getElementById('cards').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'none';
-  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','performance','markets','skillrun'];
+  document.getElementById('featured-picks').style.display = 'none';
+  document.getElementById('featured-picks').innerHTML = '';
+  const noSearch = ['today','positions','suggestions','journal','trend','events','strategies','performance','markets'];
   document.getElementById('search').style.display = noSearch.includes(tab) ? 'none' : '';
   document.getElementById('filter-bar').style.display = noSearch.includes(tab) ? 'none' : 'flex';
   if(tab==='today'){
@@ -1159,12 +1167,16 @@ function applyTab(tab, list){
     document.getElementById('markets').style.display = 'block';
     window.Markets && Markets.render();
   }
-  else if(tab==='skillrun'){
-    document.getElementById('skillrun').style.display = 'block';
-    window.SkillRun && SkillRun.render();
+  else if(tab==='long'){
+    document.getElementById('featured-picks').style.display = 'block';
+    window.SkillPicks && SkillPicks.renderLongTerm();
+    renderCards(list,'long_term_score');
   }
-  else if(tab==='long') renderCards(list,'long_term_score');
-  else if(tab==='swing') renderCards(list,'swing_score');
+  else if(tab==='swing'){
+    document.getElementById('featured-picks').style.display = 'block';
+    window.SkillPicks && SkillPicks.renderSwing();
+    renderCards(list,'swing_score');
+  }
   else renderTable(list);
 }
 
