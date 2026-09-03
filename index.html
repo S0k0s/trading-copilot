@@ -608,20 +608,41 @@ function mountChart(container, ticker){
   }
 }
 
-// Προτάσεις από το αυτόματο scheduled scan (2x/εβδομάδα, alert-only — ΔΕΝ εκτελεί trades μόνο του)
-// Ενημέρωσε αυτό το array μετά από κάθε νέο σχετικό scan που θες να εμφανίζεται εδώ.
-const SUGGESTIONS = [
-  {ticker:"WDC", name:"Western Digital", category:"Quality Compounding",
-   score:91.1, price:467, rsi:38.3, pe_ratio:25.56, peg_ratio:0.39, debt_equity:0.18, roe:85.9,
-   piotroski_f:5, altman_z:7.6, eps_growth_forecast_3y:76, week52_change:591, beta:2.17,
-   reasoning:"Ισχυρά θεμελιώδη (PEG 0.39, ROE 85.9%), αλλά η μετοχή έχει ήδη ανέβει +591% σε 52 εβδ. — μεγάλο ρίσκο διόρθωσης.",
-   suggestedInvest:300, stopPct:"-15% έως -20%", scanDate:"17/07/2026"},
-  {ticker:"SNDK", name:"Sandisk", category:"Quality Compounding",
-   score:94.3, price:1411, rsi:39.9, pe_ratio:47.50, peg_ratio:0.04, debt_equity:0.02, roe:39.3,
-   piotroski_f:6, altman_z:8.34, eps_growth_forecast_3y:330, week52_change:3203, beta:null,
-   reasoning:"Πολύ δυνατά νούμερα (PEG 0.04, σχεδόν μηδενικό χρέος) αλλά εξαιρετικά \"καυτή\" ιστορία (+3.203% σε 52 εβδ.) — υψηλό ρίσκο.",
-   suggestedInvest:300, stopPct:"-15% έως -20%", scanDate:"17/07/2026"}
-];
+// Προτάσεις — υπολογίζονται δυναμικά από το DATA σε κάθε φόρτωση/ανανέωση (computeSuggestions(),
+// καλείται μαζί με το computeQuestPass()), με τα ίδια κριτήρια που περιγράφει το CATEGORY_INFO παρακάτω.
+let SUGGESTIONS = [];
+window.SUGGESTIONS = SUGGESTIONS;
+let dataLastUpdatedIso = null;
+
+function computeSuggestions(){
+  const out = [];
+  DATA.forEach(d => {
+    if(d.swing_score != null && d.swing_score > 90){
+      out.push(buildSuggestion(d, "Momentum Breakout", d.swing_score,
+        `Swing Score ${fmt(d.swing_score)} — ισχυρό, υγιές momentum σε ανοδική τάση.`));
+    }
+    if(d.long_term_score != null && d.long_term_score > 90){
+      out.push(buildSuggestion(d, "Quality Compounding", d.long_term_score,
+        `Long-Term Score ${fmt(d.long_term_score)} — σχεδόν τέλεια θεμελιώδη για μακροπρόθεσμη κατοχή.`));
+    }
+    if(d.rsi != null && d.rsi < 35 && d.price != null && d.ma200 != null && d.price > d.ma200){
+      out.push(buildSuggestion(d, "Quality Pullback", d.long_term_score ?? d.swing_score ?? 0,
+        `RSI ${fmt(d.rsi)} (υπερπουλημένο) ενώ η τιμή παραμένει πάνω από τον MA200 — πιθανή προσωρινή βουτιά μέσα σε υγιές uptrend.`));
+    }
+  });
+  out.sort((a,b)=> b.score - a.score);
+  SUGGESTIONS = out;
+  window.SUGGESTIONS = SUGGESTIONS;
+}
+
+function buildSuggestion(d, category, score, reasoning){
+  return {
+    ticker: d.ticker, name: d.name || '', category, score: Math.round(score*10)/10,
+    price: d.price, rsi: d.rsi, pe_ratio: d.pe_ratio, peg_ratio: d.peg_ratio,
+    suggestedInvest: 300, stopPct: "-15% έως -20%",
+    reasoning, scanDate: dataLastUpdatedIso ? formatUpdated(dataLastUpdatedIso) : "—",
+  };
+}
 const CATEGORY_INFO = {
   "Momentum Breakout":{icon:"🚀", desc:"Ισχυρό, υγιές momentum σε ανοδική τάση (Swing Score &gt; 90)."},
   "Quality Pullback":{icon:"📉", desc:"Προσωρινή \"βουτιά\" μέσα σε υγιές μακροπρόθεσμο uptrend, με σταθερά θεμελιώδη (RSI &lt; 35, τιμή &gt; 200MA)."},
@@ -1440,7 +1461,9 @@ fetch('data.json?_=' + Date.now())
   .then(json=>{
     DATA = json.stocks || [];
     window.DATA = DATA;
+    dataLastUpdatedIso = json.last_updated;
     computeQuestPass();
+    computeSuggestions();
     populateSectorFilter();
     document.getElementById('updated-date').textContent = formatUpdated(json.last_updated);
     document.getElementById('universe-count').textContent = DATA.length + ' μετοχές';
@@ -1473,6 +1496,7 @@ async function refreshAllData(btn){
     const dataJson = await dataRes.json();
     DATA = dataJson.stocks || [];
     window.DATA = DATA;
+    dataLastUpdatedIso = dataJson.last_updated;
     document.getElementById('updated-date').textContent = formatUpdated(dataJson.last_updated);
     document.getElementById('universe-count').textContent = DATA.length + ' μετοχές';
 
@@ -1482,6 +1506,7 @@ async function refreshAllData(btn){
     window.Analysis && Analysis.clearHistoryCache();
 
     computeQuestPass();
+    computeSuggestions();
     populateSectorFilter();
     refresh();
     window.Today && Today.render();
