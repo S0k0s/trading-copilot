@@ -1,1 +1,1 @@
-{"last_updated": "2026-09-09T00:16:56Z", "mode": "live", "cash": {"free": 0, "total": 44.05, "invested": 43.13, "ppl": 0.92, "result": -12.82}, "positions": [{"ticker": "STX", "t212_ticker": "STX_US_EQ", "quantity": 0.05661019, "avg_price": 885.8829126, "current_price": 904.99, "ppl": 0.92, "fx_ppl": -0.01, "since": "2026-09-08"}]}
+{"last_updated": "2026-09-09T12:19:03Z", "mode": "live", "cash": {"free": 44.01, "total": 44.01, "invested": 0, "ppl": 0, "result": -11.87}, "positions": []}
