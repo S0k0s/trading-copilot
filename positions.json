@@ -1,1 +1,1 @@
-{"last_updated": "2026-09-11T00:12:16Z", "mode": "live", "cash": {"free": 44.01, "total": 44.01, "invested": 0, "ppl": 0, "result": -11.87}, "positions": []}
+{"last_updated": "2026-09-11T12:11:09Z", "mode": "live", "cash": {"free": 0, "total": 42.62, "invested": 43.94, "ppl": -1.32, "result": -11.87}, "positions": [{"ticker": "CRS", "t212_ticker": "CRS_US_EQ", "quantity": 0.11023952, "avg_price": 462.53829843, "current_price": 448.25, "ppl": -1.32, "fx_ppl": 0.04, "since": "2026-09-11"}]}
